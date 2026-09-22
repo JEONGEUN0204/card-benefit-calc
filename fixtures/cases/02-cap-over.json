@@ -1,0 +1,26 @@
+{
+  "id": "02-cap-over",
+  "description": "한도를 넘기는 순간 부분 할인으로 잘리고, 그 사유가 cappedBy에 남는다.",
+  "card": "simple-cafe",
+  "initialPrevSpending": 500000,
+  "transactions": [
+    { "id": "c1", "date": "2026-01-05", "amount": 60000, "merchant": "스타벅스", "category": "cafe" },
+    { "id": "c2", "date": "2026-01-06", "amount": 50000, "merchant": "투썸플레이스", "category": "cafe" },
+    { "id": "c3", "date": "2026-01-07", "amount": 50000, "merchant": "커피빈", "category": "cafe" }
+  ],
+  "expect": {
+    "months": [
+      {
+        "month": "2026-01",
+        "tierMin": 300000,
+        "totalDiscount": 10000,
+        "countedSpending": 50000,
+        "transactions": {
+          "c1": { "discount": 6000, "reason": "ok", "countedSpending": 0 },
+          "c2": { "discount": 4000, "reason": "ok", "cappedBy": "benefit", "countedSpending": 0 },
+          "c3": { "discount": 0, "reason": "benefitCapReached", "countedSpending": 50000 }
+        }
+      }
+    ]
+  }
+}

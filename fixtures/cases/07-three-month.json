@@ -1,0 +1,56 @@
+{
+  "id": "07-three-month",
+  "description": "3개월 연속 시뮬레이션. 첫 달은 전월 데이터가 없어 구간을 가정하고, 2월에 혜택을 챙긴 대가로 실적이 20만원까지 줄어 3월에 구간이 떨어진다. 이 서비스가 보여주려는 바로 그 장면이다.",
+  "card": "simple-cafe",
+  "transactions": [
+    { "id": "jan-mart", "date": "2026-01-10", "amount": 400000, "merchant": "이마트", "category": "mart" },
+    { "id": "jan-cafe", "date": "2026-01-15", "amount": 30000, "merchant": "스타벅스", "category": "cafe" },
+    { "id": "feb-cafe1", "date": "2026-02-05", "amount": 60000, "merchant": "스타벅스", "category": "cafe" },
+    { "id": "feb-cafe2", "date": "2026-02-06", "amount": 50000, "merchant": "투썸플레이스", "category": "cafe" },
+    { "id": "feb-cvs", "date": "2026-02-07", "amount": 6000, "merchant": "GS25", "category": "convenience" },
+    { "id": "feb-mart", "date": "2026-02-10", "amount": 200000, "merchant": "이마트", "category": "mart" },
+    { "id": "mar-cafe", "date": "2026-03-05", "amount": 50000, "merchant": "스타벅스", "category": "cafe" },
+    { "id": "mar-mart", "date": "2026-03-10", "amount": 100000, "merchant": "이마트", "category": "mart" }
+  ],
+  "expect": {
+    "months": [
+      {
+        "month": "2026-01",
+        "tierMin": 0,
+        "tierAssumed": true,
+        "prevSpending": null,
+        "totalDiscount": 0,
+        "countedSpending": 430000,
+        "transactions": {
+          "jan-mart": { "discount": 0, "reason": "noMatch", "countedSpending": 400000 },
+          "jan-cafe": { "discount": 0, "reason": "tierLocked", "countedSpending": 30000 }
+        }
+      },
+      {
+        "month": "2026-02",
+        "tierMin": 300000,
+        "tierAssumed": false,
+        "prevSpending": 430000,
+        "totalDiscount": 10500,
+        "countedSpending": 200000,
+        "transactions": {
+          "feb-cafe1": { "discount": 6000, "reason": "ok", "countedSpending": 0 },
+          "feb-cafe2": { "discount": 4000, "reason": "ok", "cappedBy": "benefit", "countedSpending": 0 },
+          "feb-cvs": { "discount": 500, "reason": "ok", "countedSpending": 0 },
+          "feb-mart": { "discount": 0, "reason": "noMatch", "countedSpending": 200000 }
+        }
+      },
+      {
+        "month": "2026-03",
+        "tierMin": 0,
+        "prevSpending": 200000,
+        "totalDiscount": 0,
+        "countedSpending": 150000,
+        "transactions": {
+          "mar-cafe": { "discount": 0, "reason": "tierLocked", "countedSpending": 50000 },
+          "mar-mart": { "discount": 0, "reason": "noMatch", "countedSpending": 100000 }
+        }
+      }
+    ]
+  }
+}

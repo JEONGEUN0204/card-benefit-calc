@@ -1,0 +1,35 @@
+{
+  "id": "04-tier-boundary",
+  "description": "구간 경계. 전월실적 299,999원은 30만원 구간에 못 미쳐 혜택이 잠기고, 그 달에 40만원을 써서 다음 달에 열린다.",
+  "card": "simple-cafe",
+  "initialPrevSpending": 299999,
+  "transactions": [
+    { "id": "jan", "date": "2026-01-10", "amount": 400000, "merchant": "스타벅스", "category": "cafe" },
+    { "id": "feb", "date": "2026-02-10", "amount": 50000, "merchant": "스타벅스", "category": "cafe" }
+  ],
+  "expect": {
+    "months": [
+      {
+        "month": "2026-01",
+        "tierMin": 0,
+        "tierAssumed": false,
+        "prevSpending": 299999,
+        "totalDiscount": 0,
+        "countedSpending": 400000,
+        "transactions": {
+          "jan": { "discount": 0, "reason": "tierLocked", "countedSpending": 400000 }
+        }
+      },
+      {
+        "month": "2026-02",
+        "tierMin": 300000,
+        "prevSpending": 400000,
+        "totalDiscount": 5000,
+        "countedSpending": 0,
+        "transactions": {
+          "feb": { "discount": 5000, "reason": "ok", "countedSpending": 0 }
+        }
+      }
+    ]
+  }
+}

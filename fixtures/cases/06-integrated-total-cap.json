@@ -1,0 +1,44 @@
+{
+  "id": "06-integrated-total-cap",
+  "description": "통합 할인한도 1만원이 혜택별 한도보다 먼저 바닥나는 카드. 배달 한도가 차면 전 가맹점 0.5% 혜택으로 넘어가고, 통합 한도를 정확히 소진한 뒤 실적 73.9만원으로 다음 달 70만원 구간에 진입한다.",
+  "card": "complex-integrated",
+  "initialPrevSpending": 400000,
+  "transactions": [
+    { "id": "t1", "date": "2026-01-03", "amount": 10000, "merchant": "서울교통공사", "category": "transport" },
+    { "id": "t2", "date": "2026-01-04", "amount": 30000, "merchant": "배달의민족", "category": "delivery" },
+    { "id": "t3", "date": "2026-01-05", "amount": 30000, "merchant": "요기요", "category": "delivery" },
+    { "id": "t4", "date": "2026-01-06", "amount": 30000, "merchant": "쿠팡이츠", "category": "delivery" },
+    { "id": "t5", "date": "2026-01-07", "amount": 100000, "merchant": "이마트", "category": "mart" },
+    { "id": "t6", "date": "2026-01-08", "amount": 600000, "merchant": "가전백화점", "category": "mart" },
+    { "id": "f1", "date": "2026-02-03", "amount": 10000, "merchant": "서울교통공사", "category": "transport" }
+  ],
+  "expect": {
+    "months": [
+      {
+        "month": "2026-01",
+        "tierMin": 300000,
+        "prevSpending": 400000,
+        "totalDiscount": 10000,
+        "countedSpending": 739000,
+        "transactions": {
+          "t1": { "discount": 1000, "reason": "ok", "cappedBy": "perTransaction", "appliedBenefitId": "transport", "countedSpending": 9000 },
+          "t2": { "discount": 3000, "reason": "ok", "cappedBy": "perTransaction", "appliedBenefitId": "delivery", "countedSpending": 0 },
+          "t3": { "discount": 3000, "reason": "ok", "appliedBenefitId": "delivery", "countedSpending": 0 },
+          "t4": { "discount": 150, "reason": "ok", "appliedBenefitId": "all", "countedSpending": 30000 },
+          "t5": { "discount": 500, "reason": "ok", "appliedBenefitId": "all", "countedSpending": 100000 },
+          "t6": { "discount": 2350, "reason": "ok", "cappedBy": "benefit", "appliedBenefitId": "all", "countedSpending": 600000 }
+        }
+      },
+      {
+        "month": "2026-02",
+        "tierMin": 700000,
+        "prevSpending": 739000,
+        "totalDiscount": 1000,
+        "countedSpending": 9000,
+        "transactions": {
+          "f1": { "discount": 1000, "reason": "ok", "appliedBenefitId": "transport", "countedSpending": 9000 }
+        }
+      }
+    ]
+  }
+}

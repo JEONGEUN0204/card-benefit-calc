@@ -1,0 +1,54 @@
+{
+  "id": "complex-integrated",
+  "name": "통합한도 올라운드카드",
+  "issuer": "테스트카드",
+  "annualFee": 30000,
+  "rounding": "floor10",
+  "sourceNote": "가상의 카드다. 통합 할인한도와 실적 제외 방식이 혜택마다 다른 구조를 재현한다.",
+  "tiers": [
+    { "min": 0, "label": "실적 미달" },
+    { "min": 300000, "label": "30만원 이상" },
+    { "min": 700000, "label": "70만원 이상" }
+  ],
+  "totalMonthlyCapByTier": { "0": 0, "300000": 10000, "700000": 20000 },
+  "spendingExclusions": [
+    { "kind": "category", "values": ["tax", "giftCard", "utility", "insurance"] },
+    { "kind": "merchant", "values": ["상품권"] },
+    { "kind": "paymentType", "values": ["interestFreeInstallment"] }
+  ],
+  "benefits": [
+    {
+      "id": "transport",
+      "label": "대중교통 20% 할인",
+      "match": { "categories": ["transport"] },
+      "discount": { "type": "rate", "rate": 0.2 },
+      "perTransactionCap": 1000,
+      "monthlyCapByTier": { "0": 0, "300000": 5000, "700000": 10000 },
+      "excludeFromSpending": "discountOnly",
+      "priority": 5,
+      "sourceNote": "대중교통 20% 할인, 건당 1천원 한도. 할인액만 실적에서 제외."
+    },
+    {
+      "id": "delivery",
+      "label": "배달앱 15% 할인",
+      "match": { "categories": ["delivery"] },
+      "discount": { "type": "rate", "rate": 0.15 },
+      "minTransaction": 10000,
+      "perTransactionCap": 3000,
+      "countLimit": { "period": "month", "max": 3 },
+      "monthlyCapByTier": { "0": 0, "300000": 6000, "700000": 12000 },
+      "excludeFromSpending": "full",
+      "sourceNote": "배달앱 1만원 이상 결제 시 15% 할인, 건당 3천원 한도, 월 3회. 할인받은 건 전액 실적 제외."
+    },
+    {
+      "id": "all",
+      "label": "전 가맹점 0.5% 할인",
+      "match": {},
+      "discount": { "type": "rate", "rate": 0.005 },
+      "monthlyCapByTier": { "0": 0, "300000": 3000, "700000": 5000 },
+      "excludeFromSpending": "none",
+      "priority": 0,
+      "sourceNote": "전 가맹점 0.5% 기본 할인. 실적에서 제외되지 않음."
+    }
+  ]
+}

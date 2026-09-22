@@ -1,0 +1,26 @@
+{
+  "id": "05-daily-count",
+  "description": "1일 1회 제한. 같은 날 두 번째 건은 막히고 날짜가 바뀌면 다시 열린다.",
+  "card": "simple-cafe",
+  "initialPrevSpending": 500000,
+  "transactions": [
+    { "id": "v1", "date": "2026-01-05", "amount": 6000, "merchant": "GS25", "category": "convenience" },
+    { "id": "v2", "date": "2026-01-05", "amount": 6000, "merchant": "CU", "category": "convenience" },
+    { "id": "v3", "date": "2026-01-06", "amount": 6000, "merchant": "세븐일레븐", "category": "convenience" }
+  ],
+  "expect": {
+    "months": [
+      {
+        "month": "2026-01",
+        "tierMin": 300000,
+        "totalDiscount": 1000,
+        "countedSpending": 6000,
+        "transactions": {
+          "v1": { "discount": 500, "reason": "ok", "countedSpending": 0 },
+          "v2": { "discount": 0, "reason": "countLimit", "countedSpending": 6000 },
+          "v3": { "discount": 500, "reason": "ok", "countedSpending": 0 }
+        }
+      }
+    ]
+  }
+}

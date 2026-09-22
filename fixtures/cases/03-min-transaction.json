@@ -1,0 +1,28 @@
+{
+  "id": "03-min-transaction",
+  "description": "건당 최소금액 경계. 약관의 '5천원 이상'은 5,000원을 포함하고 4,999원은 제외한다.",
+  "card": "simple-cafe",
+  "initialPrevSpending": 300000,
+  "transactions": [
+    { "id": "c1", "date": "2026-01-01", "amount": 4999, "merchant": "스타벅스", "category": "cafe" },
+    { "id": "c2", "date": "2026-01-02", "amount": 5000, "merchant": "스타벅스", "category": "cafe" },
+    { "id": "v1", "date": "2026-01-03", "amount": 5000, "merchant": "GS25", "category": "convenience" },
+    { "id": "v2", "date": "2026-01-04", "amount": 4999, "merchant": "CU", "category": "convenience" }
+  ],
+  "expect": {
+    "months": [
+      {
+        "month": "2026-01",
+        "tierMin": 300000,
+        "totalDiscount": 1000,
+        "countedSpending": 9998,
+        "transactions": {
+          "c1": { "discount": 0, "reason": "belowMin", "countedSpending": 4999 },
+          "c2": { "discount": 500, "reason": "ok", "countedSpending": 0 },
+          "v1": { "discount": 500, "reason": "ok", "countedSpending": 0 },
+          "v2": { "discount": 0, "reason": "belowMin", "countedSpending": 4999 }
+        }
+      }
+    ]
+  }
+}
