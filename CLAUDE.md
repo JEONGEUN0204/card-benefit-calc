@@ -32,14 +32,25 @@
 ## 구조
 
 ```
-src/core/      계산 엔진 (순수 함수)
-fixtures/cards/  카드 규칙 JSON
-fixtures/cases/  손으로 계산한 기대값을 담은 골든 케이스
-scripts/sim.ts   결과를 눈으로 대조하는 CLI
+src/core/             계산 엔진 (순수 함수)
+src/import/           명세서 파서 + 가맹점 카테고리 매핑
+fixtures/cards/       카드 규칙 JSON
+fixtures/cases/       손으로 계산한 기대값을 담은 골든 케이스
+fixtures/statements/  카드사별 샘플 명세서
+scripts/sim.ts        결과를 눈으로 대조하는 CLI
+scripts/import.ts     명세서를 거래 목록으로 옮기는 CLI
 ```
 
 계산 흐름: 전월실적 → `selectTier` → `applyDiscounts`(건별 할인 + 한도 차감) →
 `calcSpending`(실적 제외 반영) → 다음 달 구간. `simulate`가 이 고리를 월별로 돌린다.
+
+가져오기 흐름: 파일 → 문자열 행렬(`parseCsv` / `readWorkbookRows`) → 포맷 감지 → 컬럼
+매핑 → 행별 정규화 → 취소 상쇄 → 시간순 정렬 → 카테고리 → `Transaction[]`.
+
+`src/import/`도 파일을 직접 읽지 않는다. 행렬을 받는 순수 함수라 파일 읽기는 호출자
+(브라우저 File API, `scripts/import.ts`)의 몫이고, 규칙 2가 이 경계 위에 서 있다.
+카드사를 추가할 때는 `src/import/formats/`에 포맷 파일을 하나 더 만들어 레지스트리에
+넣는다. 계산 엔진도 카테고리 매핑도 건드릴 일이 없다.
 
 ## 검증
 
@@ -49,6 +60,7 @@ npm run typecheck
 npm run sim -- fixtures/cases/07-three-month.json           # 월별 흐름
 npm run sim -- --max fixtures/cards/complex-integrated.json # 구간별 최대 할인
 npm run sim -- --required fixtures/cards/simple-cafe.json --tier 300000
+npm run import -- fixtures/statements/shinhan-3months.csv    # 명세서 파싱 결과
 ```
 
 ## 하네스
@@ -56,11 +68,13 @@ npm run sim -- --required fixtures/cards/simple-cafe.json --tier 300000
 **트리거:** 계산 엔진이나 규칙 스키마를 고친 뒤에는 `verify-calc` 스킬을, 새 카드 약관을 규칙
 JSON으로 옮길 때는 `add-card-rule` 스킬을 쓴다.
 
-에이전트 팀은 아직 구성하지 않았다. 카드 규칙이 2~3장 쌓이고 명세서 파서가 붙어
-`약관 → 규칙 JSON → 골든 케이스 → 검증` 절차가 반복되기 시작하면 그때 파이프라인으로 묶는다.
+에이전트 팀은 아직 구성하지 않았다. 명세서 파서는 붙었지만 카드 규칙이 아직 두 장, 그것도
+가상 카드라 `약관 → 규칙 JSON → 골든 케이스 → 검증` 절차가 반복된 적이 없다. 실제 약관으로
+카드가 2~3장 더 쌓이면 그때 파이프라인으로 묶는다.
 
 **변경 이력:**
 
 | 날짜 | 변경 내용 | 대상 | 사유 |
 |------|----------|------|------|
 | 2026-09-22 | 초기 구성 | CLAUDE.md, verify-calc, add-card-rule | 계산 엔진 코어 착수. 에이전트 팀은 도메인 모델이 굳은 뒤로 미룸 |
+| 2026-09-22 | 구조·검증에 명세서 가져오기 추가 | CLAUDE.md | `src/import/` 신설. 파싱 경계와 포맷 추가 절차를 적어둠 |
