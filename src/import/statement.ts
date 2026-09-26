@@ -57,6 +57,8 @@ interface Entry {
   issuerCategory: string;
   paymentTypeText: string;
   cancelled: boolean;
+  /** 날짜에 연도가 없어 `defaultYear`를 붙였는지. 해 넘김 보정 대상이다. */
+  yearless: boolean;
 }
 
 interface Reversal {
@@ -64,6 +66,7 @@ interface Reversal {
   date: string;
   merchant: string;
   amount: Won;
+  yearless: boolean;
 }
 
 function readCells(row: RawRow, columns: ColumnIndex): FieldCells {
@@ -76,14 +79,47 @@ function readCells(row: RawRow, columns: ColumnIndex): FieldCells {
     paymentType: at(columns.paymentType),
     issuerCategory: at(columns.issuerCategory),
     status: at(columns.status),
+    billedAmount: at(columns.billedAmount),
   };
 }
 
+/**
+ * 합계·소계 행인지.
+ *
+ * 가맹점 칸에 `소계(이름)`, `청구합계-은행 계좌`처럼 꼬리가 붙어 나오기도 한다. 날짜가
+ * 비어 있을 때만 부분일치로 보는 이유는, 날짜가 있는 행이면 `합계마트` 같은 진짜 가맹점일
+ * 수 있어서다.
+ */
 function isSummaryRow(cells: FieldCells): boolean {
   const merchant = (cells.merchant ?? '').trim();
   if (merchant === '') return true;
   const date = (cells.date ?? '').trim();
-  return SKIP_KEYWORDS.some((k) => merchant === k || date === k);
+  if (SKIP_KEYWORDS.some((k) => merchant === k || date === k)) return true;
+  return date === '' && SKIP_KEYWORDS.some((k) => merchant.includes(k));
+}
+
+/** 취소 행 가맹점명에 붙는 접두. `취소-(주)이마트` → `(주)이마트`. */
+const REVERSAL_PREFIX = /^(부분취소|취소)\s*[-:_]\s*/;
+
+function reversalKey(merchant: string): string {
+  return normalizeMerchant(merchant.trim().replace(REVERSAL_PREFIX, ''));
+}
+
+/**
+ * 연도 없는 명세서의 해 넘김을 바로잡는다.
+ *
+ * 청구주기 명세서는 12.18~01.17처럼 해를 넘긴다. 여기에 연도 하나를 일괄로 붙이면
+ * 12월 거래가 1년 뒤로 가서, 시뮬레이션에 빈 달 11개가 끼고 구간이 전부 틀린다.
+ * `defaultYear`는 1월 쪽 연도로 보고, 10~12월과 1~3월이 섞였을 때만 하반기(7월 이후)를
+ * 전년도로 돌린다.
+ */
+function rollYearBack(items: ReadonlyArray<{ date: string; yearless: boolean }>): void {
+  const months = items.filter((i) => i.yearless).map((i) => Number(i.date.slice(5, 7)));
+  if (!(months.some((m) => m >= 10) && months.some((m) => m <= 3))) return;
+  for (const item of items as Array<{ date: string; yearless: boolean }>) {
+    if (!item.yearless || Number(item.date.slice(5, 7)) < 7) continue;
+    item.date = `${Number(item.date.slice(0, 4)) - 1}${item.date.slice(4)}`;
+  }
 }
 
 /**
@@ -93,19 +129,37 @@ function isSummaryRow(cells: FieldCells): boolean {
  * 명세서에 시각이 없어 같은 날 같은 금액이 여러 건이면 마지막 건부터 상쇄한다.
  */
 function reconcile(entries: Entry[], reversals: readonly Reversal[], issues: ParseIssue[]): void {
-  for (const reversal of reversals) {
-    let matched: Entry | null = null;
+  /** 취소일 이전의 같은 가맹점 거래 중 조건에 맞는 마지막 건. */
+  const findLast = (reversal: Reversal, fits: (entry: Entry) => boolean): Entry | null => {
+    const key = reversalKey(reversal.merchant);
     for (let i = entries.length - 1; i >= 0; i -= 1) {
       const entry = entries[i];
       if (entry === undefined || entry.cancelled) continue;
-      if (entry.amount !== reversal.amount) continue;
       if (entry.date > reversal.date) continue;
-      if (normalizeMerchant(entry.merchant) !== normalizeMerchant(reversal.merchant)) continue;
-      matched = entry;
-      break;
+      if (reversalKey(entry.merchant) !== key) continue;
+      if (fits(entry)) return entry;
     }
+    return null;
+  };
+
+  for (const reversal of reversals) {
+    const matched = findLast(reversal, (e) => e.amount === reversal.amount);
 
     if (matched === null) {
+      // 전액 짝이 없으면 부분취소로 본다. 원거래를 그대로 두면 실적이 부풀고, 통째로 빼면
+      // 남은 결제액만큼 모자란다. 카드사도 남은 금액 기준으로 혜택을 다시 계산한다.
+      const partial = findLast(reversal, (e) => e.amount > reversal.amount);
+      if (partial !== null) {
+        const before = partial.amount;
+        partial.amount -= reversal.amount;
+        issues.push({
+          row: reversal.row,
+          kind: 'partiallyCancelled',
+          message: `일부 취소다. ${partial.row}행의 원거래를 ${before.toLocaleString('ko-KR')}원에서 ${partial.amount.toLocaleString('ko-KR')}원으로 줄였다.`,
+        });
+        continue;
+      }
+
       const won = reversal.amount.toLocaleString('ko-KR');
       issues.push({
         row: reversal.row,
@@ -219,6 +273,7 @@ export function parseStatement(rows: readonly RawRow[], options: ParseOptions = 
 
     const merchant = (cells.merchant ?? '').trim();
     const date = parseDate(cells.date ?? '', options.defaultYear);
+    const yearless = date !== null && parseDate(cells.date ?? '') === null;
     if (date === null) {
       issues.push({
         row: rowNumber,
@@ -228,12 +283,13 @@ export function parseStatement(rows: readonly RawRow[], options: ParseOptions = 
       continue;
     }
 
-    const amount = parseWon(cells.amount ?? '');
+    const amountText = (format.amountText === undefined ? cells.amount : format.amountText(cells)) ?? '';
+    const amount = parseWon(amountText);
     if (amount === null) {
       issues.push({
         row: rowNumber,
         kind: 'badAmount',
-        message: `금액을 읽을 수 없다: "${cells.amount ?? ''}"`,
+        message: `금액을 읽을 수 없다: "${amountText}"`,
       });
       continue;
     }
@@ -244,6 +300,14 @@ export function parseStatement(rows: readonly RawRow[], options: ParseOptions = 
 
     const kind = format.classifyRow?.(cells, amount) ?? (amount < 0 ? 'reversal' : 'normal');
 
+    if (kind === 'issuerBenefit') {
+      issues.push({
+        row: rowNumber,
+        kind: 'issuerBenefit',
+        message: '카드사가 준 캐시백·추가할인 행이다. 결제가 아니라서 계산에서 뺐다.',
+      });
+      continue;
+    }
     if (kind === 'voided') {
       issues.push({ row: rowNumber, kind: 'cancelled', message: '취소된 거래라 계산에서 뺐다.' });
       continue;
@@ -251,7 +315,7 @@ export function parseStatement(rows: readonly RawRow[], options: ParseOptions = 
     // 음수 금액은 어떤 경우에도 거래가 되지 않는다. 음수 결제액이 계산 엔진에 들어가면
     // 실적이 도로 줄어드는 기괴한 결과가 조용히 나온다.
     if (kind === 'reversal' || amount < 0) {
-      reversals.push({ row: rowNumber, date, merchant, amount: Math.abs(amount) });
+      reversals.push({ row: rowNumber, date, merchant, amount: Math.abs(amount), yearless });
       continue;
     }
 
@@ -263,9 +327,11 @@ export function parseStatement(rows: readonly RawRow[], options: ParseOptions = 
       issuerCategory: (cells.issuerCategory ?? '').trim(),
       paymentTypeText: cells.paymentType ?? '',
       cancelled: false,
+      yearless,
     });
   }
 
+  rollYearBack([...entries, ...reversals]);
   reconcile(entries, reversals, issues);
 
   const transactions = toChronological(entries.filter((e) => !e.cancelled)).map((entry) => {

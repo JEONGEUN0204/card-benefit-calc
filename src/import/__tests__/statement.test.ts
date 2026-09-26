@@ -207,3 +207,96 @@ describe('parseStatement 옵션', () => {
     expect(got.issues[0]?.kind).toBe('noHeader');
   });
 });
+
+describe('취소 짝짓기 — 실제 명세서에서 나온 경우', () => {
+  it('가맹점명 앞의 "취소-" 접두를 떼고 원거래를 찾는다', () => {
+    const got = parseStatementCsv(`이용일자,이용가맹점,이용금액
+2026.01.05,(주)이마트 성수점,"30,000"
+2026.01.06,취소-(주)이마트 성수점,"-30,000"
+`);
+    expect(got.transactions).toHaveLength(0);
+    expect(got.issues.map((i) => i.kind)).toEqual(['cancelled']);
+  });
+
+  it('부분취소는 원거래 금액을 그만큼 줄인다', () => {
+    // 3만원 중 1만원 취소. 원거래를 통째로 두면 실적이 1만원 부풀고, 통째로 빼면 2만원 모자란다.
+    const got = parseStatementCsv(`이용일자,이용가맹점,이용금액
+2026.01.05,이마트,"30,000"
+2026.01.06,이마트,"-10,000"
+`);
+    expect(got.transactions.map((t) => t.amount)).toEqual([20_000]);
+    expect(got.issues.map((i) => [i.row, i.kind])).toEqual([[3, 'partiallyCancelled']]);
+  });
+
+  it('부분취소는 취소일보다 늦은 거래를 건드리지 않는다', () => {
+    const got = parseStatementCsv(`이용일자,이용가맹점,이용금액
+2026.01.05,이마트,"30,000"
+2026.01.06,이마트,"-10,000"
+2026.01.09,이마트,"25,000"
+`);
+    expect(got.transactions.map((t) => t.amount)).toEqual([20_000, 25_000]);
+  });
+
+  it('전액취소 짝이 있으면 부분취소보다 먼저 쓴다', () => {
+    const got = parseStatementCsv(`이용일자,이용가맹점,이용금액
+2026.01.05,이마트,"30,000"
+2026.01.06,이마트,"10,000"
+2026.01.07,이마트,"-10,000"
+`);
+    expect(got.transactions.map((t) => t.amount)).toEqual([30_000]);
+  });
+
+  it('어느 원거래보다 큰 취소는 여전히 짝 없는 취소다', () => {
+    const got = parseStatementCsv(`이용일자,이용가맹점,이용금액
+2026.01.05,이마트,"30,000"
+2026.01.06,이마트,"-50,000"
+`);
+    expect(got.transactions.map((t) => t.amount)).toEqual([30_000]);
+    expect(got.issues.map((i) => i.kind)).toEqual(['unmatchedCancellation']);
+  });
+});
+
+describe('요약 행', () => {
+  it('날짜가 비고 가맹점 칸에 소계·합계가 섞인 행은 거래 아님으로 본다', () => {
+    // "날짜 읽기 실패"로 보이면 사용자는 거래를 잃은 줄 안다.
+    const got = parseStatementCsv(`이용일자,이용가맹점,이용금액
+2026.01.05,이마트,"30,000"
+,소계(홍길동),"30,000"
+,청구합계-가상은행 000***000,"30,000"
+`);
+    expect(got.transactions).toHaveLength(1);
+    expect(got.issues.map((i) => i.kind)).toEqual(['skippedRow', 'skippedRow']);
+  });
+
+  it('날짜가 있으면 이름에 합계가 들어가도 거래다', () => {
+    const got = parseStatementCsv(`이용일자,이용가맹점,이용금액
+2026.01.05,합계마트,"30,000"
+`);
+    expect(got.transactions).toHaveLength(1);
+  });
+});
+
+describe('연도 없는 날짜', () => {
+  it('12월과 1월이 섞이면 하반기 거래를 전년도로 돌린다', () => {
+    // 청구주기 명세서는 12.18~01.17처럼 해를 넘긴다. defaultYear는 1월 쪽 연도다.
+    const got = parseStatementCsv(
+      `날짜,가맹점,금액
+12.28,이마트,"1,000"
+01.03,이마트,"2,000"
+`,
+      { defaultYear: 2027 },
+    );
+    expect(got.transactions.map((t) => t.date)).toEqual(['2026-12-28', '2027-01-03']);
+  });
+
+  it('해를 넘기지 않는 명세서는 그대로 둔다', () => {
+    const got = parseStatementCsv(
+      `날짜,가맹점,금액
+07.18,이마트,"1,000"
+08.17,이마트,"2,000"
+`,
+      { defaultYear: 2026 },
+    );
+    expect(got.transactions.map((t) => t.date)).toEqual(['2026-07-18', '2026-08-17']);
+  });
+});

@@ -10,9 +10,10 @@ import { generic } from './generic.js';
 import { kb } from './kb.js';
 import { samsung } from './samsung.js';
 import { shinhan } from './shinhan.js';
+import { woori } from './woori.js';
 
 /** generic은 항상 마지막이다 — 전용 포맷이 먼저 잡혀야 한다. */
-export const FORMATS: readonly StatementFormat[] = [shinhan, kb, samsung, generic];
+export const FORMATS: readonly StatementFormat[] = [shinhan, kb, samsung, woori, generic];
 
 export function findFormat(id: string): StatementFormat | null {
   return FORMATS.find((f) => f.id === id) ?? null;
@@ -44,4 +45,4 @@ export function detectFormat(rows: readonly RawRow[]): StatementFormat | null {
   return best?.format ?? null;
 }
 
-export { generic, kb, samsung, shinhan };
+export { generic, kb, samsung, shinhan, woori };

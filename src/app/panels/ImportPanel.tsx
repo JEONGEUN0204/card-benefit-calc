@@ -17,7 +17,7 @@ interface Props {
 }
 
 /** 계산에서 빠졌지만 정상적인 행. 따로 경고할 일이 아니다. */
-const QUIET_ISSUES = new Set(['skippedRow', 'cancelled', 'zeroAmount']);
+const QUIET_ISSUES = new Set(['skippedRow', 'cancelled', 'zeroAmount', 'partiallyCancelled', 'issuerBenefit']);
 
 export function ImportPanel({ statements, parsed, merged, defaultYear, onYearChange, onChange }: Props) {
   const input = useRef<HTMLInputElement>(null);
@@ -102,8 +102,8 @@ export function ImportPanel({ statements, parsed, merged, defaultYear, onYearCha
       </div>
       {message !== null && <p className="note">{message}</p>}
       <p className="hint">
-        신한·KB·삼성 포맷은 아직 실제 명세서로 확인하지 못한 추정 컬럼명입니다. 헤더를 못 찾으면
-        포맷을 직접 골라 보고, 그래도 안 되면 알려 주세요.
+        우리카드는 실제 명세서로 맞춘 포맷입니다. 신한·KB·삼성은 아직 추정 컬럼명이라, 헤더를 못
+        찾으면 포맷을 직접 골라 보고, 그래도 안 되면 알려 주세요.
       </p>
 
       {statements.length > 0 && (
@@ -126,7 +126,7 @@ export function ImportPanel({ statements, parsed, merged, defaultYear, onYearCha
           </ul>
 
           <label className="inline-field">
-            연도가 없는 날짜(예: 01/05)에 붙일 연도
+            연도가 없는 날짜(예: 07.18)에 붙일 연도 — 12~1월 명세서면 1월 쪽 연도
             <input
               type="number"
               min={2000}
@@ -179,6 +179,9 @@ interface FileCardProps {
 
 function FileCard({ statement, result, onFormat, onSheet, onRemove }: FileCardProps) {
   const failed = result.issues.some((i) => i.kind === 'noHeader');
+  // 날짜를 하나도 못 읽었다면 거의 항상 연도 없는 명세서다. 행마다 오류를 늘어놓기보다 할 일을 말한다.
+  const needsYear =
+    !failed && result.transactions.length === 0 && result.issues.some((i) => i.kind === 'badDate');
   const problems = result.issues.filter((i) => !QUIET_ISSUES.has(i.kind));
   const detected = FORMATS.find((f) => f.id === result.formatId);
 
@@ -224,6 +227,8 @@ function FileCard({ statement, result, onFormat, onSheet, onRemove }: FileCardPr
         <p className="error">
           거래 목록의 헤더(날짜·가맹점·금액)를 찾지 못했습니다. 포맷을 직접 골라 보세요.
         </p>
+      ) : needsYear ? (
+        <p className="error">날짜에 연도가 없는 명세서입니다. 아래 “붙일 연도”를 입력하세요.</p>
       ) : (
         <p className="muted">
           읽은 행 {result.rowCount}개 → 거래 {result.transactions.length}건
@@ -231,7 +236,7 @@ function FileCard({ statement, result, onFormat, onSheet, onRemove }: FileCardPr
         </p>
       )}
 
-      {result.issues.length > 0 && !failed && (
+      {result.issues.length > 0 && !failed && !needsYear && (
         <details open={problems.length > 0}>
           <summary>
             계산에서 뺀 행 보기

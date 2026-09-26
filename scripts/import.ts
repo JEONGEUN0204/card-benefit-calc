@@ -29,6 +29,8 @@ const ISSUE_LABEL: Record<IssueKind, string> = {
   skippedRow: '거래 아님',
   cancelled: '취소됨',
   unmatchedCancellation: '짝 없는 취소',
+  partiallyCancelled: '부분취소',
+  issuerBenefit: '카드사 혜택',
 };
 
 const won = (n: Won): string => `${n.toLocaleString('ko-KR')}원`;

@@ -20,6 +20,7 @@ const FIELD_ORDER: readonly FieldName[] = [
   'status',
   'paymentType',
   'issuerCategory',
+  'billedAmount',
 ];
 
 const norm = (s: string): string => s.toLowerCase().replace(/\s+/g, '');
@@ -81,19 +82,34 @@ function signatureMatches(header: RawRow, format: StatementFormat): boolean {
 /** 안내문이 이보다 길게 붙은 명세서는 본 적이 없다. 데이터 행을 헤더로 오인하지 않게 막는다. */
 const HEADER_SEARCH_LIMIT = 30;
 
+/**
+ * 두 줄 헤더를 컬럼별로 이어 붙인다.
+ *
+ * 병합 셀 헤더는 윗줄에 `당월결제하실금액`, 아랫줄에 `회차`·`원금`·`혜택금액`이 놓인다.
+ * 이어 붙이면 아랫줄만 있는 컬럼은 `원금`으로, 둘 다 있는 컬럼은 `당월결제하실금액회차`로
+ * 남아 완전일치로 집을 수 있다.
+ */
+function joinHeaderRows(upper: RawRow, lower: RawRow): string[] {
+  const width = Math.max(upper.length, lower.length);
+  return Array.from({ length: width }, (_, i) => `${upper[i] ?? ''}${lower[i] ?? ''}`);
+}
+
 export function locateHeader(
   rows: readonly RawRow[],
   format: StatementFormat,
 ): HeaderMatch | null {
+  const span = format.headerRows ?? 1;
   const end = Math.min(rows.length, HEADER_SEARCH_LIMIT);
   for (let i = 0; i < end; i += 1) {
-    const row = rows[i];
-    if (row === undefined) continue;
-    if (!signatureMatches(row, format)) continue;
+    const first = rows[i];
+    if (first === undefined) continue;
+    const header = span === 2 ? joinHeaderRows(first, rows[i + 1] ?? []) : first;
+    if (!signatureMatches(header, format)) continue;
 
-    const columns = mapColumns(row, format);
+    const columns = mapColumns(header, format);
     if (columns === null) continue;
-    return { rowIndex: i, columns, matched: Object.keys(columns).length };
+    // rowIndex는 헤더의 마지막 줄이다. 데이터는 그 다음 행부터 시작한다.
+    return { rowIndex: i + span - 1, columns, matched: Object.keys(columns).length };
   }
   return null;
 }

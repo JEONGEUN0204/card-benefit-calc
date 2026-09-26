@@ -25,7 +25,7 @@ export type { CsvOptions } from './csv.js';
 
 export { normalizeMerchant, parseDate, parsePaymentType, parseWon } from './normalize.js';
 
-export { FORMATS, detectFormat, findFormat, generic, kb, samsung, shinhan } from './formats/index.js';
+export { FORMATS, detectFormat, findFormat, generic, kb, samsung, shinhan, woori } from './formats/index.js';
 export { locateHeader } from './columns.js';
 export type { HeaderMatch } from './columns.js';
 

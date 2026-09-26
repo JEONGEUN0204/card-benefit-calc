@@ -16,7 +16,15 @@ export type RawRow = readonly string[];
  * 카드사마다 컬럼 이름이 달라도(`이용가맹점` / `가맹점명` / `가맹점`) 여기로 모인다.
  * 포맷별 파서가 하는 일은 결국 "이 카드사의 컬럼명은 어느 논리 필드인가"를 적는 것이다.
  */
-export type FieldName = 'date' | 'merchant' | 'amount' | 'paymentType' | 'issuerCategory' | 'status';
+export type FieldName =
+  | 'date'
+  | 'merchant'
+  | 'amount'
+  | 'paymentType'
+  | 'issuerCategory'
+  | 'status'
+  /** 청구되는 원화 금액. 해외 결제의 이용금액이 현지통화로 적히는 명세서에서 쓴다. */
+  | 'billedAmount';
 
 /** 이 세 필드를 못 잡으면 거래로 읽을 수 없다. */
 export const REQUIRED_FIELDS: readonly FieldName[] = ['date', 'merchant', 'amount'];
@@ -34,7 +42,15 @@ export type FieldCells = Readonly<{ [K in FieldName]?: string | undefined }>;
  * 음수 금액의 취소 행을 따로 붙이는 곳(`reversal`)이 있다. 뒤쪽은 원거래까지 찾아 함께
  * 빼야 실적이 맞는다.
  */
-export type RowKind = 'normal' | 'voided' | 'reversal';
+export type RowKind =
+  | 'normal'
+  | 'voided'
+  | 'reversal'
+  /**
+   * 카드사가 준 캐시백·추가할인이 음수 행으로 붙은 것. 환불이 아니라서 원거래를 줄이면
+   * 실적이 틀린다. 결제도 아니므로 그냥 뺀다.
+   */
+  | 'issuerBenefit';
 
 export interface StatementFormat {
   readonly id: string;
@@ -51,6 +67,13 @@ export interface StatementFormat {
   readonly signature: readonly string[];
   /** 행의 성격 판정. 생략하면 "금액이 음수면 취소 행"으로 본다. */
   readonly classifyRow?: (cells: FieldCells, amount: Won) => RowKind;
+  /**
+   * 헤더가 몇 줄인지. 2면 헤더 행과 바로 아랫줄을 컬럼별로 이어 붙여 하나의 헤더로 본다.
+   * 병합 셀로 `당월결제하실금액` 아래에 `원금`·`혜택금액`을 늘어놓는 명세서가 있다.
+   */
+  readonly headerRows?: 1 | 2;
+  /** 금액으로 읽을 셀. 생략하면 `amount`. 해외 결제만 다른 칸을 봐야 할 때 쓴다. */
+  readonly amountText?: (cells: FieldCells) => string | undefined;
 }
 
 export type IssueKind =
@@ -69,7 +92,11 @@ export type IssueKind =
   /** 취소된 거래라 계산에서 뺌 */
   | 'cancelled'
   /** 취소 행인데 짝이 되는 원거래를 못 찾음 */
-  | 'unmatchedCancellation';
+  | 'unmatchedCancellation'
+  /** 일부만 취소돼 원거래 금액을 줄임 */
+  | 'partiallyCancelled'
+  /** 카드사 캐시백·추가할인 행이라 결제로 보지 않음 */
+  | 'issuerBenefit';
 
 export interface ParseIssue {
   /** 원본 파일의 행 번호(1-based, 헤더·안내문 포함). 사용자가 파일에서 바로 찾게 한다. */
