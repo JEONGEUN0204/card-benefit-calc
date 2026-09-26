@@ -34,6 +34,7 @@
 ```
 src/core/             계산 엔진 (순수 함수)
 src/import/           명세서 파서 + 가맹점 카테고리 매핑
+src/app/              브라우저 화면 (React + Vite). 계산은 core·import 함수만 부른다
 fixtures/cards/       카드 규칙 JSON
 fixtures/cases/       손으로 계산한 기대값을 담은 골든 케이스
 fixtures/statements/  카드사별 샘플 명세서
@@ -49,6 +50,11 @@ scripts/import.ts     명세서를 거래 목록으로 옮기는 CLI
 
 `src/import/`도 파일을 직접 읽지 않는다. 행렬을 받는 순수 함수라 파일 읽기는 호출자
 (브라우저 File API, `scripts/import.ts`)의 몫이고, 규칙 2가 이 경계 위에 서 있다.
+화면(`src/app/`)만 DOM 타입을 본다. 루트 tsconfig는 `src/app`을 빼고 DOM lib 없이 돌기 때문에
+`src/core`·`src/import`가 브라우저 API에 기대면 `npm run typecheck`가 잡는다(규칙 5). 규칙 2는
+빌드 CSP(`vite.config.ts`의 `connect-src 'none'`)가 한 번 더 막는다. 화면이 저장하는 것은
+사용자 카테고리 규칙과 고른 카드뿐이고 거래 내역은 저장하지 않는다.
+
 카드사를 추가할 때는 `src/import/formats/`에 포맷 파일을 하나 더 만들어 레지스트리에
 넣는다. 계산 엔진도 카테고리 매핑도 건드릴 일이 없다.
 
@@ -56,7 +62,8 @@ scripts/import.ts     명세서를 거래 목록으로 옮기는 CLI
 
 ```bash
 npm test                                                    # 유닛 + 골든
-npm run typecheck
+npm run typecheck                                           # core + app (app만 DOM)
+npm run build && npm run preview                            # CSP가 들어간 빌드로 화면 확인
 npm run sim -- fixtures/cases/07-three-month.json           # 월별 흐름
 npm run sim -- --max fixtures/cards/complex-integrated.json # 구간별 최대 할인
 npm run sim -- --required fixtures/cards/simple-cafe.json --tier 300000
@@ -78,3 +85,4 @@ JSON으로 옮길 때는 `add-card-rule` 스킬을 쓴다.
 |------|----------|------|------|
 | 2026-09-22 | 초기 구성 | CLAUDE.md, verify-calc, add-card-rule | 계산 엔진 코어 착수. 에이전트 팀은 도메인 모델이 굳은 뒤로 미룸 |
 | 2026-09-22 | 구조·검증에 명세서 가져오기 추가 | CLAUDE.md | `src/import/` 신설. 파싱 경계와 포맷 추가 절차를 적어둠 |
+| 2026-09-23 | 구조·검증에 화면 추가 | CLAUDE.md | `src/app/` 신설. DOM 타입 분리와 빌드 CSP로 규칙 2·5를 강제 |

@@ -29,7 +29,7 @@ export { FORMATS, detectFormat, findFormat, generic, kb, samsung, shinhan } from
 export { locateHeader } from './columns.js';
 export type { HeaderMatch } from './columns.js';
 
-export { parseStatement, parseStatementCsv } from './statement.js';
+export { parseStatement, parseStatementCsv, summarizeUncategorized } from './statement.js';
 export type { ParseOptions, ParseResult } from './statement.js';
 
 export {
@@ -54,3 +54,7 @@ export type {
   MatchField,
   MatchKind,
 } from './category/types.js';
+
+export { decodeStatementBytes } from './decode.js';
+export { mergeParseResults } from './merge.js';
+export type { MergedStatements } from './merge.js';

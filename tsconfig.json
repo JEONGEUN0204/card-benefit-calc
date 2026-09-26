@@ -15,5 +15,6 @@
     "noEmit": true,
     "types": ["node", "vitest/globals"]
   },
-  "include": ["src", "scripts", "fixtures"]
+  "include": ["src", "scripts", "fixtures", "vite.config.ts"],
+  "exclude": ["src/app"]
 }

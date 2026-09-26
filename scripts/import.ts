@@ -13,6 +13,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { defaultRuleset, parseUserRules, withUserRules } from '../src/import/category/rules.js';
+import { decodeStatementBytes } from '../src/import/decode.js';
 import { parseStatementCsv } from '../src/import/statement.js';
 import { listSheets, parseStatementWorkbook } from '../src/import/workbook.js';
 import type { ParseOptions, ParseResult } from '../src/import/statement.js';
@@ -60,7 +61,7 @@ function parseFile(path: string, options: ParseOptions, sheetName?: string): Par
     }
     return parseStatementWorkbook(data, sheetName === undefined ? options : { ...options, sheetName });
   }
-  return parseStatementCsv(readFileSync(full, 'utf8'), options);
+  return parseStatementCsv(decodeStatementBytes(new Uint8Array(readFileSync(full))), options);
 }
 
 function printResult(result: ParseResult): void {

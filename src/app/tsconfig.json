@@ -1,0 +1,12 @@
+{
+  // 화면 코드만 DOM 타입을 본다. 루트 설정은 DOM이 없어서 src/core가 브라우저 API에
+  // 기대기 시작하면 typecheck가 먼저 잡는다 (CLAUDE.md 규칙 5).
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
+    "types": ["vite/client"]
+  },
+  "include": ["."],
+  "exclude": []
+}

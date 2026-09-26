@@ -5,19 +5,29 @@
   "type": "module",
   "description": "전월실적 제외까지 반영한 신용카드 혜택 시뮬레이터",
   "scripts": {
+    "start": "vite",
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p src/app",
     "sim": "tsx scripts/sim.ts",
     "import": "tsx scripts/import.ts"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.1",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2",
+    "vite": "^8.3.0",
     "vitest": "^5.0.1"
   },
   "dependencies": {
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
   }
 }

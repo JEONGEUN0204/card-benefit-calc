@@ -139,7 +139,7 @@ function toChronological(entries: readonly Entry[]): Entry[] {
   return ordered.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
 }
 
-function summarizeUncategorized(
+export function summarizeUncategorized(
   transactions: readonly Transaction[],
   fallback: string,
 ): UncategorizedMerchant[] {

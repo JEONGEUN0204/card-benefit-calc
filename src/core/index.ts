@@ -36,4 +36,5 @@ export { simulate } from './simulate.js';
 export type { SimulateOptions } from './simulate.js';
 export { maxDiscountByTier } from './maxDiscount.js';
 export { requiredSpendFor } from './requiredSpend.js';
+export { patternFromTransactions } from './pattern.js';
 export type { RequiredSpendOptions } from './requiredSpend.js';
