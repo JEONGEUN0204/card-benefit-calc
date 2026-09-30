@@ -21,11 +21,24 @@ export function selectTier(spending: Won, tiers: readonly Tier[]): Tier | null {
  * 해당 구간에서 이 혜택의 월 한도.
  *
  * 표에 없는 구간은 0으로 본다. 카드사가 혜택을 주는 구간만 표에 적기 때문이다.
+ * 값이 `null`이면 그 구간에서 한도가 없다("할인 한도 없음") — 무한대를 돌려준다.
  * 구간이 null이면 실적 미달이라 어떤 혜택도 열리지 않는다.
  */
 export function benefitCapFor(benefit: Benefit, tier: Tier | null): Won {
   if (tier === null) return 0;
-  return benefit.monthlyCapByTier[String(tier.min)] ?? 0;
+  const cap = benefit.monthlyCapByTier[String(tier.min)];
+  if (cap === null) return Number.POSITIVE_INFINITY;
+  return cap ?? 0;
+}
+
+/**
+ * 해당 구간의 월정액 할인. 거래와 무관하게 구간만으로 정해진다.
+ *
+ * 표가 없는 카드는 0이다. 표에 없는 구간도 0 — 구간 키 누락은 `parseCardRule`이 막는다.
+ */
+export function rebateFor(rule: CardRule, tier: Tier | null): Won {
+  if (tier === null) return 0;
+  return rule.monthlyRebateByTier?.[String(tier.min)] ?? 0;
 }
 
 /**
@@ -40,4 +53,21 @@ export function totalCapFor(rule: CardRule, tier: Tier | null): Won {
   const table = rule.totalMonthlyCapByTier;
   if (table === undefined) return Number.POSITIVE_INFINITY;
   return table[String(tier.min)] ?? 0;
+}
+
+/**
+ * 이 혜택이 속한 그룹의 해당 구간 월 한도.
+ *
+ * 그룹에 들어 있지 않으면 무한대를 돌려준다 — 대부분의 혜택이 그렇고, 그래야 호출부가
+ * 그룹 유무를 따로 분기하지 않는다. 그룹을 가리키는데 그 그룹이 없는 경우도 무한대다.
+ * 그 상황은 `parseCardRule`이 규칙을 받을 때 이미 막으므로 여기까지 오지 않는다.
+ */
+export function groupCapFor(rule: CardRule, benefit: Benefit, tier: Tier | null): Won {
+  const id = benefit.capGroup;
+  if (id === undefined) return Number.POSITIVE_INFINITY;
+  if (tier === null) return 0;
+
+  const group = rule.capGroups?.find((g) => g.id === id);
+  if (group === undefined) return Number.POSITIVE_INFINITY;
+  return group.monthlyCapByTier[String(tier.min)] ?? 0;
 }

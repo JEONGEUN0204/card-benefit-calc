@@ -1,6 +1,16 @@
+import { assertResolved } from './choice.js';
 import { applyDiscounts } from './discount.js';
 import { calcSpending } from './spending.js';
-import type { CardRule, RequiredSpendResult, SpendingPattern, Tier, Transaction, Won } from './types.js';
+import { rebateFor } from './tier.js';
+import type {
+  CardRule,
+  RequiredSpendResult,
+  SpendingPattern,
+  SpendingSample,
+  Tier,
+  Transaction,
+  Won,
+} from './types.js';
 
 const DEFAULT_TICKET: Won = 20_000;
 /** 가상 거래를 흩뿌릴 날짜 수. 일 단위 횟수 제한이 현실적으로 걸리게 한다. */
@@ -40,6 +50,9 @@ interface Synthetic {
  * 마지막 카테고리가 반올림 오차를 흡수해 합계가 정확히 총액과 맞는다.
  */
 function buildTransactions(total: Won, pattern: SpendingPattern): Synthetic {
+  const samples = (pattern.samples ?? []).filter((s) => s.amount > 0);
+  if (samples.length > 0) return repeatSamples(total, samples);
+
   const parts = normalizeWeights(pattern.weights);
   const breakdown: Record<string, Won> = {};
   const txs: Transaction[] = [];
@@ -76,6 +89,36 @@ function buildTransactions(total: Won, pattern: SpendingPattern): Synthetic {
   return { txs, breakdown };
 }
 
+/**
+ * 실제 거래 표본을 순서대로 되풀이해 총액을 채운다. 마지막 건은 남은 금액으로 자른다.
+ *
+ * 금액을 비율로 늘리지 않고 건을 되풀이하는 이유는 건당 최소금액·건당 한도가 원래 건단가에
+ * 걸려 있기 때문이다. 가맹점명·해외·결제유형도 표본 그대로 옮겨 혜택 매칭이 원본과 같다.
+ */
+function repeatSamples(total: Won, samples: readonly SpendingSample[]): Synthetic {
+  const breakdown: Record<string, Won> = {};
+  const txs: Transaction[] = [];
+  let remaining = total;
+  let seq = 0;
+
+  while (remaining > 0) {
+    const sample = samples[seq % samples.length]!;
+    const amount = Math.min(sample.amount, remaining);
+    remaining -= amount;
+    breakdown[sample.category] = (breakdown[sample.category] ?? 0) + amount;
+    const day = String((seq % SPREAD_DAYS) + 1).padStart(2, '0');
+    txs.push({
+      ...sample,
+      id: `sample-${String(seq).padStart(6, '0')}`,
+      date: `${BASE_MONTH}-${day}`,
+      amount,
+    });
+    seq += 1;
+  }
+
+  return { txs, breakdown };
+}
+
 interface Evaluated {
   spending: Won;
   discount: Won;
@@ -91,7 +134,9 @@ function evaluate(
   const { txs, breakdown } = buildTransactions(total, pattern);
   const discounts = applyDiscounts(rule, tier, txs);
   const spending = calcSpending(rule, txs, discounts);
-  return { spending: spending.total, discount: discounts.totalDiscount, breakdown };
+  // 월정액은 결제액과 무관하게 구간이 정한다. 실적에 영향이 없어 탐색에는 끼지 않는다.
+  const discount = discounts.totalDiscount + rebateFor(rule, tier);
+  return { spending: spending.total, discount, breakdown };
 }
 
 /**
@@ -110,6 +155,7 @@ export function requiredSpendFor(
   pattern: SpendingPattern,
   options: RequiredSpendOptions = {},
 ): RequiredSpendResult {
+  assertResolved(rule);
   const tier = options.currentTier === undefined ? targetTier : options.currentTier;
   const target = targetTier.min;
   const upper = options.maxSpend ?? Math.max(target * 10, DEFAULT_MAX_SPEND);

@@ -6,6 +6,9 @@
  */
 export type {
   Benefit,
+  CapGroup,
+  ChoiceGroup,
+  CardArt,
   CardRule,
   CountLimit,
   DiscountReason,
@@ -18,6 +21,8 @@ export type {
   RoundingMode,
   SpendingExclusion,
   SpendingPattern,
+  SpendingSample,
+  StackedDiscount,
   Tier,
   TierMaxDiscount,
   Transaction,
@@ -26,8 +31,12 @@ export type {
 } from './types.js';
 
 export { roundDiscount } from './rounding.js';
+export { assertResolved, resolveChoices } from './choice.js';
+export type { ChoiceSelection } from './choice.js';
+export { parseCardRule } from './parseCardRule.js';
+export type { CardRuleIssue, ParseCardRuleResult } from './parseCardRule.js';
 export { matchBenefits, matchesBenefit } from './match.js';
-export { benefitCapFor, selectTier, totalCapFor } from './tier.js';
+export { benefitCapFor, groupCapFor, selectTier, totalCapFor } from './tier.js';
 export { applyDiscounts } from './discount.js';
 export type { MonthDiscountResult, TxDiscount } from './discount.js';
 export { calcSpending, countedSpendingOf, isExcludedFromSpending } from './spending.js';

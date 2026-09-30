@@ -2,12 +2,32 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
+import { resolveChoices } from '../choice.js';
+import { parseCardRule } from '../parseCardRule.js';
 import { simulate } from '../simulate.js';
 import type { CardRule, MonthResult, Won } from '../types.js';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
+/** 화면에 실리는 실제 카드. */
 const CARDS_DIR = join(ROOT, 'fixtures', 'cards');
+/**
+ * 골든 케이스 전용 가상 카드.
+ *
+ * 엔진의 경계(건당 한도·횟수 제한·통합 한도 같은 조합)를 좁은 카드 하나로 몰아 검증하려면
+ * 실제 카드보다 가상 카드가 낫다. 다만 화면 목록에 뜨면 쓸 수 없는 카드를 고르게 되므로
+ * `fixtures/cards/`(앱이 번들하는 자리) 밖에 둔다. 검사는 실제 카드와 똑같이 건다.
+ */
+const TEST_CARDS_DIR = join(ROOT, 'fixtures', 'testcards');
 const CASES_DIR = join(ROOT, 'fixtures', 'cases');
+
+/** 두 디렉터리의 규칙 JSON 경로를 한 줄로 늘어놓는다. */
+function ruleFiles(): { dir: string; file: string }[] {
+  return [CARDS_DIR, TEST_CARDS_DIR].flatMap((dir) =>
+    readdirSync(dir)
+      .filter((f) => f.endsWith('.json'))
+      .map((file) => ({ dir, file })),
+  );
+}
 
 interface ExpectedTx {
   discount?: Won;
@@ -16,6 +36,8 @@ interface ExpectedTx {
   cappedBy?: string | null;
   appliedBenefitId?: string | null;
   countedSpending?: Won;
+  /** 겹쳐 붙은 중복 혜택. null이면 "겹친 것이 없어야 한다"는 뜻이다. */
+  stacked?: { benefitId: string; discount: Won; cappedBy?: string }[] | null;
 }
 
 interface ExpectedMonth {
@@ -24,6 +46,8 @@ interface ExpectedMonth {
   tierAssumed?: boolean;
   prevSpending?: Won | null;
   totalDiscount?: Won;
+  /** 구간에 붙는 월정액 할인. `totalDiscount`에 이미 들어 있다. */
+  rebate?: Won;
   countedSpending?: Won;
   transactions?: Record<string, ExpectedTx>;
 }
@@ -33,6 +57,8 @@ interface GoldenCase {
   description: string;
   card: string;
   initialPrevSpending?: Won;
+  /** 택1 선택지가 있는 카드에서 고른 값. 그룹 id → 선택지 id. */
+  choices?: Record<string, string>;
   transactions: Parameters<typeof simulate>[1];
   expect: { months: ExpectedMonth[] };
 }
@@ -42,13 +68,25 @@ function readJson<T>(path: string): T {
 }
 
 const cards = new Map<string, CardRule>(
-  readdirSync(CARDS_DIR)
-    .filter((f) => f.endsWith('.json'))
-    .map((f) => {
-      const rule = readJson<CardRule>(join(CARDS_DIR, f));
-      return [rule.id, rule];
-    }),
+  ruleFiles().map(({ dir, file }) => {
+    const rule = readJson<CardRule>(join(dir, file));
+    return [rule.id, rule];
+  }),
 );
+
+/*
+ * 번들된 카드 규칙도 사용자가 올린 규칙과 같은 기준을 통과해야 한다. 여기서 가장 잘 걸리는
+ * 것은 구간별 한도의 키 누락이다 — 엔진이 0으로 읽어 오류 없이 할인액만 줄어들기 때문에,
+ * 골든 케이스의 기대값을 함께 고치면 그대로 묻힌다.
+ */
+describe('번들된 카드 규칙', () => {
+  for (const { dir, file } of ruleFiles()) {
+    it(`${file}은 규칙 검사를 통과한다`, () => {
+      const result = parseCardRule(readJson(join(dir, file)));
+      expect(result.ok ? [] : result.issues.map((i) => `${i.path}: ${i.message}`)).toEqual([]);
+    });
+  }
+});
 
 const cases = readdirSync(CASES_DIR)
   .filter((f) => f.endsWith('.json'))
@@ -77,7 +115,7 @@ describe('골든 케이스', () => {
       }
 
       const months = simulate(
-        rule,
+        resolveChoices(rule, testCase.choices ?? {}),
         testCase.transactions,
         testCase.initialPrevSpending === undefined
           ? {}
@@ -100,6 +138,7 @@ describe('골든 케이스', () => {
             if (wanted.tierAssumed !== undefined) expect(got.tierAssumed).toBe(wanted.tierAssumed);
             if (wanted.prevSpending !== undefined) expect(got.prevSpending).toBe(wanted.prevSpending);
             if (wanted.totalDiscount !== undefined) expect(got.totalDiscount).toBe(wanted.totalDiscount);
+            if (wanted.rebate !== undefined) expect(got.rebate).toBe(wanted.rebate);
             if (wanted.countedSpending !== undefined) {
               expect(got.countedSpending).toBe(wanted.countedSpending);
             }
@@ -128,6 +167,9 @@ describe('골든 케이스', () => {
               }
               if (wantedTx.countedSpending !== undefined) {
                 expect(actual.countedSpending, `${txId} 실적 기여액`).toBe(wantedTx.countedSpending);
+              }
+              if (wantedTx.stacked !== undefined) {
+                expect(actual.stacked ?? null, `${txId} 중복 할인`).toEqual(wantedTx.stacked);
               }
             }
 

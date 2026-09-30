@@ -33,6 +33,8 @@ export const woori: StatementFormat = {
     if (status.includes('취소') || amount < 0) return 'reversal';
     return 'normal';
   },
+  // 매출구분이 `국외일시불`처럼 국내·국외를 적는다.
+  isOverseas: (cells) => (cells.status ?? '').includes('국외'),
   amountText: (cells) => {
     if (!(cells.status ?? '').includes('국외')) return cells.amount;
     // "33,170 \n USD22.00" — 앞쪽이 원화다. 실제 파일에는 줄바꿈 문자가 아니라 글자 그대로의

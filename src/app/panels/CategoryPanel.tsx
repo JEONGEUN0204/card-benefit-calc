@@ -3,6 +3,7 @@ import type { Transaction, Won } from '../../core/index.js';
 import { CATEGORIES, UNCATEGORIZED, normalizeMerchant } from '../../import/index.js';
 import type { CategoryRule, UncategorizedMerchant } from '../../import/index.js';
 import { categoryLabel, won } from '../labels.js';
+import { AlertIcon, CheckIcon, InboxIcon } from '../shell/icons.js';
 
 interface Props {
   transactions: readonly Transaction[];
@@ -26,7 +27,12 @@ function byMerchant(transactions: readonly Transaction[]): MerchantRow[] {
   for (const tx of transactions) {
     const found = rows.get(tx.merchant);
     if (found === undefined) {
-      rows.set(tx.merchant, { merchant: tx.merchant, category: tx.category, count: 1, amount: tx.amount });
+      rows.set(tx.merchant, {
+        merchant: tx.merchant,
+        category: tx.category,
+        count: 1,
+        amount: tx.amount,
+      });
     } else {
       found.count += 1;
       found.amount += tx.amount;
@@ -45,18 +51,25 @@ function CategorySelect({
   label: string;
 }) {
   return (
-    <select aria-label={label} value={value} onChange={(e) => onChange(e.target.value)}>
+    <select aria-label={label} value={value} onChange={(event) => onChange(event.target.value)}>
       {value === UNCATEGORIZED && <option value={UNCATEGORIZED}>골라 주세요</option>}
-      {CHOICES.map((c) => (
-        <option key={c} value={c}>
-          {categoryLabel(c)}
+      {CHOICES.map((category) => (
+        <option key={category} value={category}>
+          {categoryLabel(category)}
         </option>
       ))}
     </select>
   );
 }
 
-export function CategoryPanel({ transactions, uncategorized, userRules, onAssign, onRemoveRule }: Props) {
+/** 혜택은 업종으로 걸린다. 업종을 모르는 가맹점이 남아 있으면 할인이 실제보다 적게 나온다. */
+export function CategoryPanel({
+  transactions,
+  uncategorized,
+  userRules,
+  onAssign,
+  onRemoveRule,
+}: Props) {
   const [showAll, setShowAll] = useState(false);
   const merchants = useMemo(() => byMerchant(transactions), [transactions]);
   const userPatterns = useMemo(
@@ -65,23 +78,44 @@ export function CategoryPanel({ transactions, uncategorized, userRules, onAssign
   );
   const missing = uncategorized.reduce((sum, m) => sum + m.amount, 0);
 
+  if (transactions.length === 0) {
+    return (
+      <section className="panel" aria-labelledby="category-title">
+        <div className="panel-head">
+          <h2 id="category-title">가맹점 분류</h2>
+        </div>
+        <div className="empty">
+          <InboxIcon />
+          <p>명세서를 올리면 업종을 모르는 가맹점을 여기서 정할 수 있습니다.</p>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className="panel" aria-labelledby="category-title">
       <div className="panel-head">
-        <h2 id="category-title">3. 가맹점 분류</h2>
+        <h2 id="category-title">가맹점 분류</h2>
+        <p className="section-note">가맹점 {merchants.length}곳</p>
       </div>
 
       {uncategorized.length === 0 ? (
-        <p className="ok">모든 가맹점의 업종을 정했습니다.</p>
+        <p className="callout info">
+          <CheckIcon />
+          <span className="grow">모든 가맹점의 업종을 정했습니다.</span>
+        </p>
       ) : (
         <>
-          <p>
-            업종을 모르는 가맹점이 <strong>{uncategorized.length}곳</strong>(
-            <span className="num">{won(missing)}</span>) 있습니다. 미분류 결제는 어떤 혜택에도 걸리지 않지만
-            실적에는 들어갑니다. 금액이 큰 곳부터 정해 주세요.
+          <p className="callout warn">
+            <AlertIcon />
+            <span className="grow">
+              업종을 모르는 가맹점이 <strong>{uncategorized.length}곳</strong>(
+              {won(missing)}) 있습니다. 미분류 결제는 어떤 혜택에도 걸리지 않지만 실적에는
+              들어갑니다. 금액이 큰 곳부터 정해 주세요.
+            </span>
           </p>
           <div className="table-scroll">
-            <table>
+            <table className="stack">
               <thead>
                 <tr>
                   <th scope="col">가맹점</th>
@@ -95,16 +129,20 @@ export function CategoryPanel({ transactions, uncategorized, userRules, onAssign
                 </tr>
               </thead>
               <tbody>
-                {uncategorized.map((m) => (
-                  <tr key={m.merchant}>
-                    <th scope="row">{m.merchant}</th>
-                    <td className="num">{m.count}</td>
-                    <td className="num">{won(m.amount)}</td>
-                    <td>
+                {uncategorized.map((row) => (
+                  <tr key={row.merchant}>
+                    <th scope="row">{row.merchant}</th>
+                    <td className="num" data-label="건수">
+                      {row.count}
+                    </td>
+                    <td className="num" data-label="금액">
+                      {won(row.amount)}
+                    </td>
+                    <td data-label="업종">
                       <CategorySelect
-                        label={`${m.merchant} 업종`}
+                        label={`${row.merchant} 업종`}
                         value={UNCATEGORIZED}
-                        onChange={(c) => onAssign(m.merchant, c)}
+                        onChange={(category) => onAssign(row.merchant, category)}
                       />
                     </td>
                   </tr>
@@ -115,11 +153,11 @@ export function CategoryPanel({ transactions, uncategorized, userRules, onAssign
         </>
       )}
 
-      <details open={showAll} onToggle={(e) => setShowAll(e.currentTarget.open)}>
-        <summary>분류된 가맹점도 고치기 ({merchants.length}곳)</summary>
+      <details open={showAll} onToggle={(event) => setShowAll(event.currentTarget.open)}>
+        <summary>이미 분류된 가맹점도 고치기 ({merchants.length}곳)</summary>
         {showAll && (
           <div className="table-scroll">
-            <table>
+            <table className="stack">
               <thead>
                 <tr>
                   <th scope="col">가맹점</th>
@@ -133,19 +171,25 @@ export function CategoryPanel({ transactions, uncategorized, userRules, onAssign
                 </tr>
               </thead>
               <tbody>
-                {merchants.map((m) => (
-                  <tr key={m.merchant}>
+                {merchants.map((row) => (
+                  <tr key={row.merchant}>
                     <th scope="row">
-                      {m.merchant}
-                      {userPatterns.has(normalizeMerchant(m.merchant)) && <span className="tag">직접 지정</span>}
+                      {row.merchant}
+                      {userPatterns.has(normalizeMerchant(row.merchant)) && (
+                        <span className="tag">직접 지정</span>
+                      )}
                     </th>
-                    <td className="num">{m.count}</td>
-                    <td className="num">{won(m.amount)}</td>
-                    <td>
+                    <td className="num" data-label="건수">
+                      {row.count}
+                    </td>
+                    <td className="num" data-label="금액">
+                      {won(row.amount)}
+                    </td>
+                    <td data-label="업종">
                       <CategorySelect
-                        label={`${m.merchant} 업종`}
-                        value={m.category}
-                        onChange={(c) => onAssign(m.merchant, c)}
+                        label={`${row.merchant} 업종`}
+                        value={row.category}
+                        onChange={(category) => onAssign(row.merchant, category)}
                       />
                     </td>
                   </tr>
@@ -160,12 +204,12 @@ export function CategoryPanel({ transactions, uncategorized, userRules, onAssign
         <details>
           <summary>내가 정한 규칙 {userRules.length}개 (이 브라우저에 저장됨)</summary>
           <ul className="rule-list">
-            {userRules.map((r) => (
-              <li key={r.id}>
+            {userRules.map((rule) => (
+              <li key={rule.id}>
                 <span>
-                  {r.pattern} → {categoryLabel(r.category)}
+                  {rule.pattern} → {categoryLabel(rule.category)}
                 </span>
-                <button type="button" className="link" onClick={() => onRemoveRule(r.id)}>
+                <button type="button" className="link" onClick={() => onRemoveRule(rule.id)}>
                   지우기
                 </button>
               </li>

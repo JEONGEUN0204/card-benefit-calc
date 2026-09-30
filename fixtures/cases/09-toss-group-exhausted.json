@@ -1,0 +1,31 @@
+{
+  "id": "09-toss-group-exhausted",
+  "description": "토스 삼성카드 60만원 구간에서 그룹 한도 2만원을 정확히 소진시킨 달. 토스페이 12,000원 + 11번가 8,000원(그룹 잔량에 잘림)으로 그룹이 바닥나, 뒤따르는 네이버페이 결제는 자기 혜택 한도가 남아 있는데도 groupCapReached가 된다. 손계산: 80,000×15%=12,000 / 100,000×10%=10,000이지만 그룹 잔량 8,000 / 네이버페이 0 / 17,000×50%=8,500이지만 혜택 한도 7,000 / 12,000×50%=6,000이지만 혜택 한도 5,000 → 합 32,000. 이 값이 60만원 구간의 월 최대(그룹 20,000 + 프라임 7,000 + 스타벅스 5,000)와 정확히 같아, 구간별 최대 할인표와 실제 배정이 어긋나지 않는지 함께 못 박는다.",
+  "card": "toss-samsung",
+  "initialPrevSpending": 600000,
+  "transactions": [
+    { "id": "t1", "date": "2026-03-02", "amount": 80000, "merchant": "토스페이", "category": "online" },
+    { "id": "t2", "date": "2026-03-03", "amount": 100000, "merchant": "11번가", "category": "online" },
+    { "id": "t3", "date": "2026-03-04", "amount": 50000, "merchant": "네이버페이", "category": "online" },
+    { "id": "t4", "date": "2026-03-05", "amount": 17000, "merchant": "넷플릭스", "category": "culture" },
+    { "id": "t5", "date": "2026-03-06", "amount": 12000, "merchant": "스타벅스 역삼점", "category": "cafe" }
+  ],
+  "expect": {
+    "months": [
+      {
+        "month": "2026-03",
+        "tierMin": 600000,
+        "prevSpending": 600000,
+        "totalDiscount": 32000,
+        "countedSpending": 50000,
+        "transactions": {
+          "t1": { "discount": 12000, "reason": "ok", "cappedBy": null, "appliedBenefitId": "toss-pay", "countedSpending": 0 },
+          "t2": { "discount": 8000, "reason": "ok", "cappedBy": "group", "appliedBenefitId": "online-pay", "countedSpending": 0 },
+          "t3": { "discount": 0, "reason": "groupCapReached", "appliedBenefitId": null, "countedSpending": 50000 },
+          "t4": { "discount": 7000, "reason": "ok", "cappedBy": "benefit", "appliedBenefitId": "toss-prime-digital", "countedSpending": 0 },
+          "t5": { "discount": 5000, "reason": "ok", "cappedBy": "benefit", "appliedBenefitId": "starbucks", "countedSpending": 0 }
+        }
+      }
+    ]
+  }
+}

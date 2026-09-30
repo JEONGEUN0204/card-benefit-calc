@@ -1,7 +1,16 @@
+import { assertResolved } from './choice.js';
 import { matchBenefits } from './match.js';
 import { roundDiscount } from './rounding.js';
-import { benefitCapFor, totalCapFor } from './tier.js';
-import type { Benefit, CardRule, DiscountReason, Tier, Transaction, Won } from './types.js';
+import { benefitCapFor, groupCapFor, totalCapFor } from './tier.js';
+import type {
+  Benefit,
+  CardRule,
+  DiscountReason,
+  StackedDiscount,
+  Tier,
+  Transaction,
+  Won,
+} from './types.js';
 
 /** 한 건의 할인 처리 결과. 실적 기여액은 `spending.ts`가 따로 채운다. */
 export interface TxDiscount {
@@ -9,7 +18,9 @@ export interface TxDiscount {
   appliedBenefitId: string | null;
   discount: Won;
   reason: DiscountReason;
-  cappedBy?: 'benefit' | 'total' | 'perTransaction';
+  cappedBy?: 'benefit' | 'group' | 'total' | 'perTransaction';
+  /** 대표 혜택에 겹쳐 붙은 중복 혜택. `discount`는 이것까지 더한 합이다. */
+  stacked?: StackedDiscount[];
 }
 
 export interface MonthDiscountResult {
@@ -18,12 +29,15 @@ export interface MonthDiscountResult {
   byTxId: Record<string, TxDiscount>;
   /** benefitId → 소진한 월 한도. */
   capUsage: Record<string, Won>;
+  /** capGroup id → 그룹이 소진한 월 한도. */
+  groupUsage: Record<string, Won>;
   totalCapUsed: Won;
   totalDiscount: Won;
 }
 
 interface Ledger {
   capUsage: Record<string, Won>;
+  groupUsage: Record<string, Won>;
   totalCapUsed: Won;
   /** `${benefitId}` 또는 `${benefitId}|${date}` → 할인 적용 건수. */
   counts: Record<string, number>;
@@ -67,7 +81,8 @@ function blocked(txId: string, reason: DiscountReason): TxDiscount {
  * 한 건에 한 혜택을 적용해 본다. 어디서 막혔는지가 결과에 남는다.
  *
  * 검사 순서는 "약관을 읽는 순서"와 같다: 구간 → 건당 최소금액 → 횟수 → 금액 산출 →
- * 혜택 한도 → 통합 한도. 앞 단계에서 막히면 뒤 단계의 한도는 건드리지 않는다.
+ * 혜택 한도 → 그룹 한도 → 통합 한도. 앞 단계에서 막히면 뒤 단계의 한도는 건드리지 않는다.
+ * 잘릴 때는 더 빡빡한 쪽이 최종 사유가 되도록 좁은 한도부터 넓은 한도 순으로 겹쳐 적용한다.
  */
 function evaluate(
   tx: Transaction,
@@ -93,6 +108,13 @@ function evaluate(
   const remainingBenefit = benefitCapFor(benefit, tier) - (ledger.capUsage[benefit.id] ?? 0);
   if (remainingBenefit <= 0) return blocked(tx.id, 'benefitCapReached');
 
+  const groupId = benefit.capGroup;
+  const remainingGroup =
+    groupId === undefined
+      ? Number.POSITIVE_INFINITY
+      : groupCapFor(rule, benefit, tier) - (ledger.groupUsage[groupId] ?? 0);
+  if (remainingGroup <= 0) return blocked(tx.id, 'groupCapReached');
+
   const remainingTotal = totalCapFor(rule, tier) - ledger.totalCapUsed;
   if (remainingTotal <= 0) return blocked(tx.id, 'totalCapReached');
 
@@ -102,6 +124,11 @@ function evaluate(
   if (discount > remainingBenefit) {
     discount = remainingBenefit;
     cappedBy = 'benefit';
+  }
+  // 같은 그룹의 다른 혜택이 이미 써 버렸다면 그쪽이 최종 사유가 된다.
+  if (discount > remainingGroup) {
+    discount = remainingGroup;
+    cappedBy = 'group';
   }
   // 통합 한도가 더 빡빡하면 그쪽이 최종 사유가 된다.
   if (discount > remainingTotal) {
@@ -113,61 +140,101 @@ function evaluate(
   return cappedBy === undefined ? result : { ...result, cappedBy };
 }
 
+/** 한도 장부에 할인 한 건을 적는다. 대표 혜택이든 중복 혜택이든 같은 방식이다. */
+function record(ledger: Ledger, benefit: Benefit, date: string, discount: Won): void {
+  ledger.capUsage[benefit.id] = (ledger.capUsage[benefit.id] ?? 0) + discount;
+  ledger.totalCapUsed += discount;
+  const key = countKey(benefit, date);
+  ledger.counts[key] = (ledger.counts[key] ?? 0) + 1;
+  if (benefit.capGroup !== undefined) {
+    ledger.groupUsage[benefit.capGroup] = (ledger.groupUsage[benefit.capGroup] ?? 0) + discount;
+  }
+}
+
+/** 우선순위가 같으면 실제로 더 많이 깎아주는 혜택을 먼저 본다. */
+function rank(tx: Transaction, benefits: readonly Benefit[], rule: CardRule): Benefit[] {
+  return benefits
+    .map((b, index) => ({ b, index, potential: potentialDiscount(tx, b, rule).amount }))
+    .sort((x, y) => y.potential - x.potential || x.index - y.index)
+    .sort((x, y) => (y.b.priority ?? 0) - (x.b.priority ?? 0))
+    .map(({ b }) => b);
+}
+
 /**
  * 한 달치 거래에 할인을 배정한다.
  *
  * 거래를 날짜순(FIFO)으로 처리한다. 실제 카드사가 승인 순서대로 한도를 소진하므로,
  * 이것이 현실과 맞는 기본값이다. "어떻게 쓰면 최대로 받나"라는 최적화는 성격이 다른
  * 문제이므로 이 경로에 섞지 않는다.
+ *
+ * 한 거래에는 일반 혜택 하나가 붙고, 중복 혜택(`stackable`)은 그 위에 각자 붙는다. 일반
+ * 혜택을 먼저 정해 장부에 적은 뒤 중복 혜택을 보므로, 공동·통합 한도를 나눠 쓸 때는 일반
+ * 혜택이 먼저 가져간다. 할인 합은 결제액을 넘지 않는다.
  */
 export function applyDiscounts(
   rule: CardRule,
   tier: Tier | null,
   transactions: readonly Transaction[],
 ): MonthDiscountResult {
+  assertResolved(rule);
   const ordered = [...transactions].sort(
     (a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id),
   );
 
-  const ledger: Ledger = { capUsage: {}, totalCapUsed: 0, counts: {} };
+  const ledger: Ledger = { capUsage: {}, groupUsage: {}, totalCapUsed: 0, counts: {} };
   const discounts: TxDiscount[] = [];
   const byTxId: Record<string, TxDiscount> = {};
 
   for (const tx of ordered) {
     const candidates = matchBenefits(tx, rule.benefits);
+    const plain = rank(tx, candidates.filter((b) => b.stackable !== true), rule);
+    const stacking = rank(tx, candidates.filter((b) => b.stackable === true), rule);
 
-    let chosen: TxDiscount | null = null;
-    if (candidates.length === 0) {
-      chosen = blocked(tx.id, 'noMatch');
-    } else {
-      // 우선순위가 같으면 실제로 더 많이 깎아주는 혜택을 먼저 본다.
-      const ranked = candidates
-        .map((b, index) => ({ b, index, potential: potentialDiscount(tx, b, rule).amount }))
-        .sort((x, y) => y.potential - x.potential || x.index - y.index)
-        .sort((x, y) => (y.b.priority ?? 0) - (x.b.priority ?? 0));
+    /** 이 거래에 붙은 할인. 첫 번째가 대표다. */
+    const applied: TxDiscount[] = [];
+    let firstBlocked: TxDiscount | null = null;
 
-      let firstBlocked: TxDiscount | null = null;
-      for (const { b } of ranked) {
-        const outcome = evaluate(tx, b, rule, tier, ledger);
-        if (outcome.discount > 0) {
-          chosen = outcome;
-          break;
-        }
-        firstBlocked ??= outcome;
+    for (const b of plain) {
+      const outcome = evaluate(tx, b, rule, tier, ledger);
+      if (outcome.discount > 0) {
+        applied.push(outcome);
+        record(ledger, b, tx.date, outcome.discount);
+        break;
       }
-      // 전부 막혔다면 우선순위가 가장 높은 혜택의 사유가 사용자에게 가장 쓸모 있다.
-      chosen ??= firstBlocked ?? blocked(tx.id, 'noMatch');
+      firstBlocked ??= outcome;
     }
 
-    if (chosen.discount > 0 && chosen.appliedBenefitId !== null) {
-      const benefit = rule.benefits.find((b) => b.id === chosen.appliedBenefitId);
-      ledger.capUsage[chosen.appliedBenefitId] =
-        (ledger.capUsage[chosen.appliedBenefitId] ?? 0) + chosen.discount;
-      ledger.totalCapUsed += chosen.discount;
-      if (benefit !== undefined) {
-        const key = countKey(benefit, tx.date);
-        ledger.counts[key] = (ledger.counts[key] ?? 0) + 1;
+    for (const b of stacking) {
+      const outcome = evaluate(tx, b, rule, tier, ledger);
+      if (outcome.discount <= 0) {
+        firstBlocked ??= outcome;
+        continue;
       }
+      // 할인 합이 결제액을 넘지 않게 한다. 결제액보다 많이 돌려받는 일은 없다.
+      const room = tx.amount - applied.reduce((sum, d) => sum + d.discount, 0);
+      if (room <= 0) break;
+      const discount = Math.min(outcome.discount, room);
+      applied.push({ ...outcome, discount });
+      record(ledger, b, tx.date, discount);
+    }
+
+    let chosen: TxDiscount;
+    const [main, ...rest] = applied;
+    if (main === undefined) {
+      // 전부 막혔다면 우선순위가 가장 높은 혜택의 사유가 사용자에게 가장 쓸모 있다.
+      chosen = candidates.length === 0 ? blocked(tx.id, 'noMatch') : (firstBlocked ?? blocked(tx.id, 'noMatch'));
+    } else if (rest.length === 0) {
+      chosen = main;
+    } else {
+      const stacked: StackedDiscount[] = rest.map((d) => {
+        const part: StackedDiscount = { benefitId: d.appliedBenefitId ?? '', discount: d.discount };
+        return d.cappedBy === undefined ? part : { ...part, cappedBy: d.cappedBy };
+      });
+      chosen = {
+        ...main,
+        discount: main.discount + rest.reduce((sum, d) => sum + d.discount, 0),
+        stacked,
+      };
     }
 
     discounts.push(chosen);
@@ -178,6 +245,7 @@ export function applyDiscounts(
     discounts,
     byTxId,
     capUsage: ledger.capUsage,
+    groupUsage: ledger.groupUsage,
     totalCapUsed: ledger.totalCapUsed,
     totalDiscount: ledger.totalCapUsed,
   };

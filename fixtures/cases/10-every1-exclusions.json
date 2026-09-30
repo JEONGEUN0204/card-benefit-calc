@@ -1,0 +1,58 @@
+{
+  "id": "10-every1-exclusions",
+  "description": "카드의정석 EVERY 1의 한도 없는 1%와 할인 제외, 월정액이 구간을 따라 오르내리는 흐름. 1월(전월 100만 → 100만 구간): 이마트 345,678×1%=3,456.78 → 원 단위 절사 3,456 / 스타벅스 4,500×1%=45 / 국세청(tax)·무이자할부·아파트관리비는 할인 제외라 noMatch이고 실적에서도 빠진다. 월정액 10,000 → 합 13,501. 실적은 1%가 실적에서 빠지지 않으므로 345,678+4,500=350,178. 2월(전월 350,178 → 50만 미만 구간): 월정액 0. 1%는 전월실적 조건이 없어 쿠팡 1,000,000×1%=10,000, GS25 999×1%=9.99 → 9 → 합 10,009, 실적 1,000,999. 3월(전월 1,000,999 → 100만 구간): 월정액 10,000 + 김밥천국 10,000×1%=100 → 10,100. 쿠팡 100만원에 1만원을 받아도 한도에 잘리지 않는다(cappedBy 없음).",
+  "card": "woori-every1",
+  "initialPrevSpending": 1000000,
+  "transactions": [
+    { "id": "e1", "date": "2026-01-03", "amount": 345678, "merchant": "이마트 성수점", "category": "mart" },
+    { "id": "e2", "date": "2026-01-10", "amount": 200000, "merchant": "국세청", "category": "tax" },
+    { "id": "e3", "date": "2026-01-15", "amount": 600000, "merchant": "하이마트", "category": "etc", "paymentType": "interestFreeInstallment" },
+    { "id": "e4", "date": "2026-01-20", "amount": 4500, "merchant": "스타벅스 강남점", "category": "cafe" },
+    { "id": "e5", "date": "2026-01-25", "amount": 150000, "merchant": "래미안아파트관리비", "category": "etc" },
+    { "id": "f1", "date": "2026-02-05", "amount": 1000000, "merchant": "쿠팡", "category": "online" },
+    { "id": "f2", "date": "2026-02-06", "amount": 999, "merchant": "GS25 역삼점", "category": "convenience" },
+    { "id": "m1", "date": "2026-03-02", "amount": 10000, "merchant": "김밥천국", "category": "restaurant" }
+  ],
+  "expect": {
+    "months": [
+      {
+        "month": "2026-01",
+        "tierMin": 1000000,
+        "prevSpending": 1000000,
+        "rebate": 10000,
+        "totalDiscount": 13501,
+        "countedSpending": 350178,
+        "transactions": {
+          "e1": { "discount": 3456, "reason": "ok", "cappedBy": null, "appliedBenefitId": "every-1pct", "countedSpending": 345678 },
+          "e2": { "discount": 0, "reason": "noMatch", "appliedBenefitId": null, "countedSpending": 0 },
+          "e3": { "discount": 0, "reason": "noMatch", "appliedBenefitId": null, "countedSpending": 0 },
+          "e4": { "discount": 45, "reason": "ok", "cappedBy": null, "appliedBenefitId": "every-1pct", "countedSpending": 4500 },
+          "e5": { "discount": 0, "reason": "noMatch", "appliedBenefitId": null, "countedSpending": 0 }
+        }
+      },
+      {
+        "month": "2026-02",
+        "tierMin": 0,
+        "prevSpending": 350178,
+        "rebate": 0,
+        "totalDiscount": 10009,
+        "countedSpending": 1000999,
+        "transactions": {
+          "f1": { "discount": 10000, "reason": "ok", "cappedBy": null, "appliedBenefitId": "every-1pct", "countedSpending": 1000000 },
+          "f2": { "discount": 9, "reason": "ok", "cappedBy": null, "appliedBenefitId": "every-1pct", "countedSpending": 999 }
+        }
+      },
+      {
+        "month": "2026-03",
+        "tierMin": 1000000,
+        "prevSpending": 1000999,
+        "rebate": 10000,
+        "totalDiscount": 10100,
+        "countedSpending": 10000,
+        "transactions": {
+          "m1": { "discount": 100, "reason": "ok", "cappedBy": null, "appliedBenefitId": "every-1pct", "countedSpending": 10000 }
+        }
+      }
+    ]
+  }
+}

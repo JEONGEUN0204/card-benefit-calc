@@ -1,0 +1,138 @@
+/*
+ * 디자인 토큰.
+ *
+ * 앱 화면(styles.css)과 랜딩 페이지(landing/landing.css)가 이 한 파일을 함께 읽는다.
+ * 두 곳에 색을 복사해두면 반드시 갈라지고, 그러면 같은 서비스로 보이지 않는다.
+ *
+ * 데이터 표시색(--mark 계열)은 명암·채도·표면 대비 검증기를 통과한 값이다. 눈으로 고른
+ * 값이 아니므로 바꿀 때는 검증기를 다시 돌린다.
+ */
+
+/*
+ * 본문 글꼴 — Pretendard.
+ *
+ * 파일을 저장소에 넣고 빌드에 함께 실어 나른다. 외부 CDN에서 받아 오지 않는 이유는 빌드
+ * CSP다(`font-src 'self'`). 서브셋이 아니라 전체 커버리지 가변 폰트(2.0MB)를 쓰는 이유는
+ * 이 화면이 명세서에서 읽은 가맹점명을 그대로 보여 주기 때문이다 — 완성형 2350자 서브셋은
+ * 가게 이름에 실제로 나오는 글자를 흘려 한 줄 안에서 글꼴이 갈라진다.
+ *
+ * `swap`이라 폰트가 도착하기 전에도 시스템 글꼴로 글이 먼저 보인다.
+ */
+@font-face {
+  font-family: 'Pretendard';
+  src: url('./fonts/PretendardVariable.woff2') format('woff2-variations');
+  font-weight: 45 920;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  /* 글꼴. 앱과 랜딩이 같은 값을 읽는다. */
+  --font-sans: 'Pretendard', system-ui, -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic',
+    'Noto Sans KR', sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, 'D2Coding', monospace;
+
+  /*
+   * 표면 — 회색은 중성으로 둔다.
+   *
+   * 전에는 배경·글자·괘선이 모두 초록 쪽으로 기울어 있었다(#f3f5f3 · #1c211e · #dfe4e0).
+   * 색조를 맞춘다는 뜻이었지만, 화면 전체가 한 색에 잠겨 뿌옇게 보였다. 초록은 브랜드와
+   * 할인액에만 남기고 회색에서는 걷어낸다 — 색이 있는 자리가 적을수록 그 색이 산다.
+   */
+  --bg: #f4f5f6;
+  --surface: #ffffff;
+  --surface-2: #fafbfc;
+  --surface-sunken: #eceef0;
+  --bar: rgba(255, 255, 255, 0.86);
+
+  /* 잉크와 괘선 */
+  --text: #14161a;
+  --text-2: #3d4450;
+  --muted: #697077;
+  --line: #e5e7ea;
+  --line-strong: #c9ced6;
+
+  /*
+   * 브랜드 — 초록을 밝은 쪽으로 옮긴다. 전의 #0a6b52는 흰 바탕 대비가 6.5:1이나 되는
+   * 짙은 청록이라 링크도 버튼도 칙칙했다. 지금 값은 4.60:1 — 글자로 쓸 수 있는 하한
+   * (4.5:1) 바로 위에서 가장 밝은 자리다. 더 밝히면(#0f9960은 3.65:1) 글자로 못 쓴다.
+   * 이 계열을 만질 때는 대비를 다시 계산한다. 눈으로 고르면 반드시 하한을 넘는다.
+   */
+  --accent: #0b8659;
+  --accent-hover: #086d48;
+  --accent-soft: #e8f6ef;
+  --accent-line: #9fd9bf;
+  --on-accent: #ffffff;
+
+  /* 데이터 표시. 할인액 글자에도 쓰여 같은 하한을 받는다 (4.72:1). */
+  --mark: #0a8456;
+  --mark-track: #dff0e8;
+
+  /*
+   * 인주 — 빠지는 몫. 실적에서 제외된 금액, 구간이 낮아 잃은 한도처럼 "명목에서 빼는
+   * 값"에만 쓴다. 입력을 확인하라는 경고(--warn)와는 뜻이 달라 이름을 따로 둔다.
+   */
+  --seal: #b42318;
+  --seal-soft: #fcebe8;
+
+  /* 상태 */
+  --warn: #8a4b00;
+  --warn-soft: #fcf1de;
+  --warn-line: #ecd6ab;
+  --error: #a3261b;
+  --error-soft: #fbe7e4;
+  --error-line: #eec2bc;
+
+  /*
+   * 형태. 반경은 사실상 두 단계다 — 손으로 다루는 것(입력·버튼·알림·파일)은 6px, 끌어다
+   * 놓는 넓은 자리(드롭존)만 10px. 카드 그림은 실제 카드 비율을 따라 자기 값을 쓴다.
+   * 모든 것에 같은 큰 반경을 주면 위계가 사라진다.
+   */
+  --r-sm: 6px;
+  --r-md: 6px;
+  --r-lg: 10px;
+  --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.06);
+  --shadow-md: 0 8px 24px -10px rgba(16, 24, 40, 0.22);
+
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #15171a;
+    --surface: #1c1f24;
+    --surface-2: #22262c;
+    --surface-sunken: #101215;
+    --bar: rgba(28, 31, 36, 0.86);
+
+    --text: #e8eaed;
+    --text-2: #c2c7ce;
+    --muted: #949aa3;
+    --line: #2c3138;
+    --line-strong: #3f454e;
+
+    --seal: #f2877c;
+    --seal-soft: #341c19;
+
+    --accent: #35c98b;
+    --accent-hover: #55d9a2;
+    --accent-soft: #14291f;
+    --accent-line: #245039;
+    --on-accent: #062014;
+
+    --mark: #2fc189;
+    --mark-track: #2a3a33;
+
+    --warn: #f0b765;
+    --warn-soft: #302719;
+    --warn-line: #4b3c22;
+    --error: #f0958a;
+    --error-soft: #331d1a;
+    --error-line: #52302b;
+
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow-md: 0 6px 20px -8px rgba(0, 0, 0, 0.55);
+
+    color-scheme: dark;
+  }
+}

@@ -37,6 +37,22 @@ export interface MatchRule {
   merchants?: string[];
   /** 부분일치하면 매칭에서 제외. `merchants`보다 우선한다. */
   excludeMerchants?: string[];
+  /**
+   * 이 카테고리는 할인 대상이 아니다. "국내외 가맹점 1%, 단 공과금·상품권 제외"처럼 전
+   * 가맹점 혜택에 제외 목록이 붙는 약관을 옮기는 자리다. 실적 제외(`spendingExclusions`)와는
+   * 별개다 — 할인에서 빠진다고 실적에서도 빠지는 것은 아니다.
+   */
+  excludeCategories?: string[];
+  /**
+   * 이 결제유형은 할인 대상이 아니다. "무이자할부 이용금액은 할인 제외". 결제유형이 적히지
+   * 않은 거래는 일시불로 본다.
+   */
+  excludePaymentTypes?: PaymentType[];
+  /**
+   * 해외 결제 조건. `true`면 해외 결제에만, `false`면 국내 결제에만 붙는다. 비우면 둘 다.
+   * "해외 가맹점 2%"와 "국내 가맹점 이용 시 제공"을 옮기는 자리다.
+   */
+  overseas?: boolean;
 }
 
 /** 할인 방식. 정률 또는 정액. */
@@ -48,6 +64,22 @@ export type DiscountSpec =
 export interface CountLimit {
   period: 'month' | 'day';
   max: number;
+}
+
+/**
+ * 혜택 여럿이 나눠 쓰는 월 할인 한도.
+ *
+ * 할인율이 다르면 혜택을 나눠야 하는데 한도는 하나로 묶여 있는 카드가 있다. 토스 삼성카드의
+ * "토스페이/토스쇼핑 15%"와 "온라인 영역 10%"가 하나의 "전월 이용금액대별 통합 월 할인한도"를
+ * 나눠 쓴다. 각 혜택에 같은 한도를 따로 주면 월 최대가 두 배로 부풀어, 오류 없이 그럴듯한
+ * 숫자가 나온다. 카드 전체에 걸리는 `CardRule.totalMonthlyCapByTier`와는 다른 층이다.
+ */
+export interface CapGroup {
+  id: string;
+  /** 화면에 적을 이름. 예: "토스/온라인 통합" */
+  label: string;
+  /** 구간별 월 한도. 키는 `Tier.min`의 문자열. */
+  monthlyCapByTier: Record<string, Won>;
 }
 
 export interface Benefit {
@@ -62,10 +94,24 @@ export interface Benefit {
   perTransactionCap?: Won;
   /**
    * 전월실적 구간별 월 할인 한도. 키는 `Tier.min`의 문자열.
-   * 값이 0이면 해당 구간에서 혜택이 없다는 뜻이다.
+   * 값이 0이면 해당 구간에서 혜택이 없다는 뜻이다. `null`이면 그 구간에서 **한도가 없다**
+   * ("할인 한도 없음"). 큰 수로 대신하면 구간별 최대 할인표에 그 수가 그대로 뜨므로 따로
+   * 적는다. 키가 없는 것과는 다르다 — 키가 없으면 여전히 0이다.
    */
-  monthlyCapByTier: Record<string, Won>;
+  monthlyCapByTier: Record<string, Won | null>;
   countLimit?: CountLimit;
+  /** 이 혜택이 속한 `CapGroup.id`. 같은 그룹의 혜택끼리 한 한도를 나눠 쓴다. */
+  capGroup?: string;
+  /**
+   * 이 혜택이 택1 선택지 중 하나일 때, 어느 그룹의 어느 선택지인지. 그 선택지를 골랐을 때만
+   * 켜진다(`resolveChoices`).
+   */
+  choice?: { group: string; option: string };
+  /**
+   * 다른 혜택과 한 거래에 겹쳐 붙는다. "간편결제 할인과 중복 적용 가능". 평소에는 한 거래에
+   * 혜택 하나만 붙고, 중복 혜택은 그 하나에 더해 각자 자기 한도에서 깎인다.
+   */
+  stackable?: boolean;
   excludeFromSpending: ExclusionMode;
   /** 한 거래에 여러 혜택이 매칭될 때의 우선순위. 클수록 우선. 기본 0. */
   priority?: number;
@@ -83,6 +129,35 @@ export interface SpendingExclusion {
 /** 할인액 절사 방식. */
 export type RoundingMode = 'floor10' | 'floor1' | 'round10';
 
+/**
+ * 카드 겉모습.
+ *
+ * 계산에는 쓰이지 않는다. 화면에서 "지금 어느 카드를 보고 있는지"를 이름만으로 가리기
+ * 어려워서 두는 필드다. `image`는 `fixtures/cards/images/` 안의 파일 이름이고, 파일이
+ * 없으면 `bg`·`fg`로 카드 모양을 그린다.
+ */
+export interface CardArt {
+  image?: string;
+  /** 플레이트 바탕색. `#rrggbb`. */
+  bg?: string;
+  /** 플레이트 위 글자색. `#rrggbb`. */
+  fg?: string;
+}
+
+/**
+ * 고객이 여러 혜택 중 하나를 골라 쓰는 자리. "KB Pay/네이버페이/카카오페이/토스페이(택1)".
+ *
+ * 선택지를 다 켜면 월 최대가 실제의 몇 배로 부푸므로, 계산 전에 `resolveChoices`로 하나만
+ * 남긴다. 남기지 않은 규칙을 계산 함수에 넘기면 멈춘다.
+ */
+export interface ChoiceGroup {
+  id: string;
+  /** 화면에 적을 이름. 예: "자주 쓰는 간편결제" */
+  label: string;
+  /** 첫 선택지가 기본값이다. */
+  options: { id: string; label: string }[];
+}
+
 export interface CardRule {
   id: string;
   name: string;
@@ -91,11 +166,24 @@ export interface CardRule {
   /** `min` 오름차순. 0 구간을 포함하는 것이 보통이다. */
   tiers: Tier[];
   benefits: Benefit[];
+  /** 혜택 여럿이 나눠 쓰는 한도. `Benefit.capGroup`이 id로 가리킨다. */
+  capGroups?: CapGroup[];
+  /** 택1 선택지. `Benefit.choice`가 가리킨다. `resolveChoices`를 거치면 사라진다. */
+  choices?: ChoiceGroup[];
   /** 구간별 통합 할인 한도. 키는 `Tier.min`. 없으면 통합 한도 없음. */
   totalMonthlyCapByTier?: Record<string, Won>;
+  /**
+   * 전월실적 구간에 따라 달마다 얹히는 정액 할인. 키는 `Tier.min`.
+   *
+   * 거래에 붙지 않는 할인이다 — 카드의정석 EVERY 1의 "전월실적에 따라 매월 최대 2만원
+   * 청구할인". `Benefit`은 거래에 매칭돼야 움직이므로 카드에 따로 둔다. 세 층의 한도 어디에도
+   * 잡히지 않고, 실적도 건드리지 않는다(결제가 아니라 청구에서 빠지는 돈이다).
+   */
+  monthlyRebateByTier?: Record<string, Won>;
   spendingExclusions: SpendingExclusion[];
   rounding: RoundingMode;
   sourceNote?: string;
+  art?: CardArt;
 }
 
 export type PaymentType = 'lump' | 'installment' | 'interestFreeInstallment';
@@ -108,6 +196,11 @@ export interface Transaction {
   merchant: string;
   category: string;
   paymentType?: PaymentType;
+  /**
+   * 해외 결제. 명세서가 가를 수 있을 때만 파서가 붙인다(우리카드의 `국외일시불`). 표시가 없으면
+   * 국내로 본다 — 해외 표기가 없는 명세서에서는 해외 혜택이 잡히지 않는다.
+   */
+  overseas?: boolean;
 }
 
 /**
@@ -125,6 +218,8 @@ export type DiscountReason =
   | 'belowMin'
   /** 해당 혜택의 월 한도 소진 */
   | 'benefitCapReached'
+  /** 같은 그룹의 혜택들이 나눠 쓰는 한도 소진 */
+  | 'groupCapReached'
   /** 통합 할인 한도 소진 */
   | 'totalCapReached'
   /** 횟수 제한 초과 */
@@ -133,6 +228,13 @@ export type DiscountReason =
   | 'roundedToZero'
   /** 현재 전월실적 구간에서는 이 혜택의 한도가 0 */
   | 'tierLocked';
+
+/** 한 거래에 겹쳐 붙은 중복 혜택 하나의 몫. */
+export interface StackedDiscount {
+  benefitId: string;
+  discount: Won;
+  cappedBy?: 'benefit' | 'group' | 'total' | 'perTransaction';
+}
 
 export interface TxResult {
   txId: string;
@@ -144,7 +246,12 @@ export interface TxResult {
    * 할인이 "적용은 됐지만 한도에 잘려 일부만" 받은 경우 어떤 한도가 잘랐는지.
    * 사용자가 가장 궁금해하는 지점이므로 reason(ok)과 별도로 남긴다.
    */
-  cappedBy?: "benefit" | "total" | "perTransaction";
+  cappedBy?: "benefit" | "group" | "total" | "perTransaction";
+  /**
+   * 대표 혜택에 겹쳐 붙은 중복 혜택(`Benefit.stackable`). `discount`는 이것까지 더한 합이다.
+   * 겹친 것이 없으면 필드가 없다.
+   */
+  stacked?: StackedDiscount[];
   /** 이 거래가 실적에 기여한 금액. */
   countedSpending: Won;
 }
@@ -162,9 +269,14 @@ export interface MonthResult {
    */
   tierAssumed: boolean;
   transactions: TxResult[];
+  /** 거래 할인에 `rebate`를 더한 이 달의 할인 합계. */
   totalDiscount: Won;
+  /** 이 달 구간에 딸린 월정액 할인(`CardRule.monthlyRebateByTier`). 없으면 0. */
+  rebate: Won;
   /** benefitId → 소진한 월 한도. */
   capUsage: Record<string, Won>;
+  /** capGroup id → 그룹이 소진한 월 한도. */
+  groupUsage: Record<string, Won>;
   totalCapUsed: Won;
   /** 이 달의 실적. 다음 달 구간을 결정한다. */
   countedSpending: Won;
@@ -173,14 +285,31 @@ export interface MonthResult {
 /** 구간별 월 최대 할인액 (기능 1). */
 export interface TierMaxDiscount {
   tier: Tier;
-  /** 혜택별 월 한도의 단순 합. */
+  /**
+   * 혜택별 월 한도의 단순 합에 월정액을 더한 값. 카드사 안내문이 보통 보여 주는 숫자다.
+   * 한도 없는 혜택은 더하지 않는다.
+   */
   sumOfBenefitCaps: Won;
-  /** 통합 한도까지 반영한 실제 최대 할인액. */
+  /**
+   * 그룹 한도와 통합 한도까지 반영한 실제 최대 할인액(월정액 포함).
+   * `unboundedBenefits`가 비어 있지 않으면 그 혜택들을 뺀, 상한이 있는 몫만의 최대다.
+   */
   maxDiscount: Won;
+  /** 이 구간의 월정액 할인. */
+  rebate: Won;
+  /**
+   * 이 구간에서 어떤 한도에도 묶이지 않는 혜택. 쓰는 만큼 할인이 늘어나 최대치가 없다.
+   * 통합 한도가 있으면 여기 들지 않는다 — 그 한도가 상한이 된다.
+   */
+  unboundedBenefits: string[];
+  /** 그룹 한도 때문에 잘렸는지. */
+  cappedByGroup: boolean;
   /** 통합 한도 때문에 잘렸는지. 잘렸다면 사용자에게 알릴 가치가 있다. */
   cappedByTotal: boolean;
-  /** benefitId → 이 구간의 월 한도. */
-  byBenefit: Record<string, Won>;
+  /** benefitId → 이 구간의 월 한도. `null`은 한도 없음. */
+  byBenefit: Record<string, Won | null>;
+  /** capGroup id → 이 구간의 그룹 한도. */
+  byGroup: Record<string, Won>;
 }
 
 /** 소비 패턴 — 사용내역이 없을 때 필요 사용액을 역산하는 입력 (기능 2). */
@@ -191,7 +320,16 @@ export interface SpendingPattern {
   ticketSize?: Record<string, Won>;
   /** 건단가 기본값. */
   defaultTicket?: Won;
+  /**
+   * 실제 거래 표본. 있으면 비중·건단가 대신 이 거래들을 순서대로 되풀이해 가상 거래를 만든다.
+   * 혜택 대부분이 가맹점명·해외 여부로 붙어서, 업종 비중만으로는 할인이 한 건도 걸리지 않는다.
+   */
+  samples?: SpendingSample[];
 }
+
+/** 가상 거래의 틀이 되는 거래 한 건. 날짜와 id는 가상 거래를 만들 때 새로 붙인다. */
+export type SpendingSample = Pick<Transaction, 'merchant' | 'category' | 'amount'> &
+  Pick<Transaction, 'paymentType' | 'overseas'>;
 
 /** 목표 구간에 도달하기 위한 필요 사용액 (기능 2). */
 export interface RequiredSpendResult {

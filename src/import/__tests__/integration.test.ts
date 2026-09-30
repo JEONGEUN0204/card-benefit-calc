@@ -8,7 +8,7 @@ import { CATEGORIES } from '../category/vocabulary.js';
 import { parseStatementCsv } from '../statement.js';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
-const CARDS_DIR = join(ROOT, 'fixtures', 'cards');
+const CARDS_DIR = join(ROOT, 'fixtures', 'testcards');
 
 function loadCard(file: string): CardRule {
   return JSON.parse(readFileSync(join(CARDS_DIR, file), 'utf8')) as CardRule;

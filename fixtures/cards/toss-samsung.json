@@ -1,0 +1,218 @@
+{
+  "id": "toss-samsung",
+  "name": "토스 삼성카드",
+  "issuer": "삼성카드",
+  "annualFee": 15000,
+  "rounding": "floor1",
+  "sourceNote": "출처: 토스 카드라운지 상품 안내(card-lounge.toss.im/card/10279)의 혜택별 '자세히 보기'. 약관에 할인액 절사 방식이 적혀 있지 않아 원 단위(floor1)로 두었다 — 상품설명서를 구하면 확인해야 한다. 해외 2%는 명세서가 해외 결제를 표시할 때만(우리카드의 '국외일시불') 잡힌다 — 삼성카드 명세서의 해외 표기는 아직 확인하지 못했다. 담지 못한 조건 두 가지: (1) '무이자할부 이용금액'은 할인 대상에서 빠지지만, 규칙 스키마에 '이 결제유형은 할인 대상 아님'을 적을 자리가 없다(실적에는 포함되므로 spendingExclusions도 아니다). (2) '발급월+1개월까지는 전월 이용금액 30만원 미만이어도 30만원 구간 혜택 제공'이라는 신규 발급 예외는 달을 세는 조건이라 담지 않았다.",
+  "art": {
+    "bg": "#1c3f8f",
+    "fg": "#ffffff"
+  },
+  "tiers": [
+    {
+      "min": 0,
+      "label": "실적 미달"
+    },
+    {
+      "min": 300000,
+      "label": "30만원 이상"
+    },
+    {
+      "min": 600000,
+      "label": "60만원 이상"
+    },
+    {
+      "min": 1000000,
+      "label": "100만원 이상"
+    }
+  ],
+  "capGroups": [
+    {
+      "id": "toss-online",
+      "label": "토스/온라인 통합",
+      "monthlyCapByTier": {
+        "0": 0,
+        "300000": 10000,
+        "600000": 20000,
+        "1000000": 30000
+      }
+    }
+  ],
+  "spendingExclusions": [
+    {
+      "kind": "category",
+      "values": [
+        "tax",
+        "utility",
+        "education",
+        "giftCard"
+      ]
+    },
+    {
+      "kind": "merchant",
+      "values": [
+        "관리비",
+        "임대료",
+        "상품권"
+      ]
+    }
+  ],
+  "benefits": [
+    {
+      "id": "toss-pay",
+      "label": "토스페이·토스쇼핑 15% 할인",
+      "match": {
+        "merchants": [
+          "토스페이",
+          "토스쇼핑"
+        ]
+      },
+      "discount": {
+        "type": "rate",
+        "rate": 0.15
+      },
+      "monthlyCapByTier": {
+        "0": 0,
+        "300000": 10000,
+        "600000": 20000,
+        "1000000": 30000
+      },
+      "capGroup": "toss-online",
+      "excludeFromSpending": "full",
+      "priority": 2,
+      "sourceNote": "\"할인율 15% / 토스페이 국내 온·오프라인 가맹점, 토스쇼핑\". 한도는 온라인 영역 10%와 함께 쓰는 \"전월 이용금액대별 통합 월 할인한도\"(30만 1만원 / 60만 2만원 / 100만 3만원)라 capGroup으로 묶었다. 개별 한도는 따로 적혀 있지 않아 그룹 한도와 같은 값으로 둔다."
+    },
+    {
+      "id": "online-pay",
+      "label": "온라인 간편결제·쇼핑몰 10% 할인",
+      "match": {
+        "merchants": [
+          "삼성페이",
+          "네이버페이",
+          "카카오페이",
+          "PAYCO",
+          "페이코",
+          "스마일페이",
+          "coupay",
+          "쿠페이",
+          "SSGPAY",
+          "SSG페이",
+          "L.PAY",
+          "엘페이",
+          "쿠팡",
+          "네이버플러스 스토어",
+          "SSG.COM",
+          "롯데ON",
+          "롯데온",
+          "G마켓",
+          "지마켓",
+          "옥션",
+          "11번가",
+          "삼성카드쇼핑"
+        ]
+      },
+      "discount": {
+        "type": "rate",
+        "rate": 0.1
+      },
+      "monthlyCapByTier": {
+        "0": 0,
+        "300000": 10000,
+        "600000": 20000,
+        "1000000": 30000
+      },
+      "capGroup": "toss-online",
+      "excludeFromSpending": "full",
+      "priority": 1,
+      "sourceNote": "\"할인율 10% / 온라인 간편결제: 삼성페이, 네이버페이, 카카오페이, PAYCO, 스마일페이, coupay, SSGPAY, L.PAY / 온라인 쇼핑몰: 쿠팡, 네이버플러스 스토어, SSG.COM, 롯데 ON, G마켓, 옥션, 11번가, 삼성카드쇼핑\". \"온라인 간편결제는 국내 온라인 가맹점에 한하며, 오프라인 매장 결제건은 제외\" — 명세서만으로는 온·오프라인을 가를 수 없어 가맹점명으로만 맞춘다."
+    },
+    {
+      "id": "toss-prime-digital",
+      "label": "토스프라임·인앱결제·디지털콘텐츠 50% 할인",
+      "match": {
+        "merchants": [
+          "토스프라임",
+          "구글플레이",
+          "GOOGLE PLAY",
+          "앱스토어",
+          "APP STORE",
+          "APPLE.COM",
+          "넷플릭스",
+          "NETFLIX",
+          "디즈니",
+          "DISNEY",
+          "유튜브",
+          "YOUTUBE",
+          "티빙",
+          "TVING"
+        ]
+      },
+      "discount": {
+        "type": "rate",
+        "rate": 0.5
+      },
+      "monthlyCapByTier": {
+        "0": 0,
+        "300000": 5000,
+        "600000": 7000,
+        "1000000": 10000
+      },
+      "excludeFromSpending": "full",
+      "sourceNote": "\"토스프라임 정기결제건 / 인앱 결제: 구글플레이, 앱스토어 / 디지털콘텐츠: 넷플릭스·디즈니+·유튜브·티빙 정기결제건\", \"전월 이용금액대별 통합 월 할인한도 30만원 이상 5,000원 / 60만원 이상 7,000원 / 100만원 이상 10,000원\". 셋 다 같은 50%라 혜택 하나로 묶었다 — 한도도 하나다."
+    },
+    {
+      "id": "starbucks",
+      "label": "스타벅스 50% 할인",
+      "match": {
+        "merchants": [
+          "스타벅스",
+          "STARBUCKS"
+        ]
+      },
+      "discount": {
+        "type": "rate",
+        "rate": 0.5
+      },
+      "monthlyCapByTier": {
+        "0": 0,
+        "300000": 5000,
+        "600000": 5000,
+        "1000000": 5000
+      },
+      "excludeFromSpending": "full",
+      "priority": 3,
+      "sourceNote": "\"월 할인한도 : 5,000원\", \"전월 이용금액 30만원 이상 시 제공\" — 구간이 올라가도 한도가 그대로다. \"오프라인 결제건에 한하며, 백화점·할인점·쇼핑몰 등의 임대매장은 제외 (단, 사이렌오더 결제건은 혜택 제공)\"는 명세서로 가를 수 없어 반영하지 않았다."
+    },
+    {
+      "id": "overseas",
+      "label": "해외 2% 할인",
+      "match": {
+        "overseas": true,
+        "excludeCategories": [
+          "giftCard"
+        ],
+        "excludeMerchants": [
+          "상품권",
+          "기프트카드",
+          "선불카드"
+        ],
+        "excludePaymentTypes": [
+          "interestFreeInstallment"
+        ]
+      },
+      "discount": {
+        "type": "rate",
+        "rate": 0.02
+      },
+      "monthlyCapByTier": {
+        "0": null,
+        "300000": null,
+        "600000": null,
+        "1000000": null
+      },
+      "excludeFromSpending": "none",
+      "sourceNote": "\"전월 이용금액에 관계없이, 할인한도 없이 해외 2% 결제일할인 / 해외 가맹점 및 해외 직접구매 이용건\". 할인 제외: \"무이자할부 이용금액, 삼성카드 할인이 적용된 일시불 및 할부 이용금액, 기프트/선불카드 … 구매 및 충전, 상품권 구매건\". \"삼성카드의 다른 결제일할인 혜택과 중복 적용되지 않으며, 할인 혜택이 큰 금액만 적용\"이라 stackable이 아니다. 전월 이용금액 제외 대상에는 토스/온라인·디지털콘텐츠·스타벅스 할인 이용금액만 적혀 있고 해외 2%는 없어 excludeFromSpending은 none이다. '국내 전자지급 결제대행사를 통한 해외 결제'는 국내로 승인되어 제외된다 — 명세서도 국내로 찍으므로 따로 할 일은 없다. 해외겸용 카드에 한한다."
+    }
+  ]
+}

@@ -74,6 +74,11 @@ export interface StatementFormat {
   readonly headerRows?: 1 | 2;
   /** 금액으로 읽을 셀. 생략하면 `amount`. 해외 결제만 다른 칸을 봐야 할 때 쓴다. */
   readonly amountText?: (cells: FieldCells) => string | undefined;
+  /**
+   * 이 행이 해외 결제인지. 명세서가 가를 수 있는 카드사만 적는다. 생략하면 모든 거래를
+   * 국내로 본다 — 해외 표기가 없는데 짐작으로 붙이면 해외 할인이 엉뚱한 결제에 붙는다.
+   */
+  readonly isOverseas?: (cells: FieldCells) => boolean;
 }
 
 export type IssueKind =

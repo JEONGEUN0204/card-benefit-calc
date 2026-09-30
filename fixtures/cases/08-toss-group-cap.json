@@ -1,0 +1,40 @@
+{
+  "id": "08-toss-group-cap",
+  "description": "토스 삼성카드의 그룹 통합한도. 30만원 구간에서 토스페이 15%와 온라인 10%가 한 한도 1만원을 나눠 쓴다 — 토스페이가 6,000원을 먼저 쓰면 쿠팡 결제는 남은 4,000원만 받는다(cappedBy group). 스타벅스는 그룹 밖이라 따로 3,000원을 받는다. 손계산: 40,000×15%=6,000 / 60,000×10%=6,000이지만 그룹 잔량 4,000 / 6,000×50%=3,000 → 합 13,000. 할인받은 세 건(106,000원)이 실적에서 전액 빠져 1월 실적은 김밥천국 100,000원뿐이고, 그래서 2월은 실적 미달 구간으로 떨어져 같은 토스페이 결제가 tierLocked가 된다.",
+  "card": "toss-samsung",
+  "initialPrevSpending": 300000,
+  "transactions": [
+    { "id": "t1", "date": "2026-01-05", "amount": 40000, "merchant": "토스페이", "category": "online" },
+    { "id": "t2", "date": "2026-01-10", "amount": 60000, "merchant": "쿠팡", "category": "online" },
+    { "id": "t3", "date": "2026-01-15", "amount": 6000, "merchant": "스타벅스 강남점", "category": "cafe" },
+    { "id": "t4", "date": "2026-01-20", "amount": 100000, "merchant": "김밥천국", "category": "restaurant" },
+    { "id": "f1", "date": "2026-02-05", "amount": 40000, "merchant": "토스페이", "category": "online" }
+  ],
+  "expect": {
+    "months": [
+      {
+        "month": "2026-01",
+        "tierMin": 300000,
+        "prevSpending": 300000,
+        "totalDiscount": 13000,
+        "countedSpending": 100000,
+        "transactions": {
+          "t1": { "discount": 6000, "reason": "ok", "cappedBy": null, "appliedBenefitId": "toss-pay", "countedSpending": 0 },
+          "t2": { "discount": 4000, "reason": "ok", "cappedBy": "group", "appliedBenefitId": "online-pay", "countedSpending": 0 },
+          "t3": { "discount": 3000, "reason": "ok", "cappedBy": null, "appliedBenefitId": "starbucks", "countedSpending": 0 },
+          "t4": { "discount": 0, "reason": "noMatch", "appliedBenefitId": null, "countedSpending": 100000 }
+        }
+      },
+      {
+        "month": "2026-02",
+        "tierMin": 0,
+        "prevSpending": 100000,
+        "totalDiscount": 0,
+        "countedSpending": 40000,
+        "transactions": {
+          "f1": { "discount": 0, "reason": "tierLocked", "appliedBenefitId": null, "countedSpending": 40000 }
+        }
+      }
+    ]
+  }
+}

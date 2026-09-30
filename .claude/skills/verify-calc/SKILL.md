@@ -34,6 +34,10 @@ npm run typecheck
 | 월 이월 | 한도는 달마다 초기화 / 이번 달 실적이 다음 달 구간을 정함 | `07` |
 | 절사 | 정률 할인의 소수가 `roundDiscount`를 거쳐 정수가 됨 | `rounding.test.ts` |
 | 실적 제외 | `full`은 결제액 전체, `discountOnly`는 할인액만, 기본 제외 항목이 우선 | `spending.test.ts` |
+| 한도 없음 | `null` 한도는 잘리지 않음 / 키가 없으면 여전히 0 / 통합 한도가 있으면 그 아래로 잘림 | `10`, `uncappedRebate.test.ts` |
+| 택1 선택지 | 고른 선택지의 혜택만 켜짐 / 고르지 않은 규칙은 계산 함수가 멈춤 / 낡은 선택은 첫 선택지로 | `choiceStack.test.ts`, `13` |
+| 중복 적용 | 일반 혜택 하나 + 중복 혜택 각자 / 한도는 따로 깎임 / 합이 결제액을 넘지 않음 / 가장 엄한 실적 제외 | `12`, `choiceStack.test.ts` |
+| 월정액 할인 | 구간 경계에서 1원 모자라면 한 단계 아래 금액 / 한도·실적에 잡히지 않음 / 빈 달에도 들어옴 | `11`, `uncappedRebate.test.ts` |
 
 ## 3. 눈으로 대조
 
@@ -41,8 +45,8 @@ npm run typecheck
 
 ```bash
 npm run sim -- fixtures/cases/07-three-month.json
-npm run sim -- --max fixtures/cards/complex-integrated.json
-npm run sim -- --required fixtures/cards/simple-cafe.json --tier 300000
+npm run sim -- --max fixtures/cards/toss-samsung.json
+npm run sim -- --required fixtures/testcards/simple-cafe.json --tier 300000
 ```
 
 특히 볼 것:

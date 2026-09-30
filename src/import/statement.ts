@@ -56,6 +56,7 @@ interface Entry {
   merchant: string;
   issuerCategory: string;
   paymentTypeText: string;
+  overseas: boolean;
   cancelled: boolean;
   /** 날짜에 연도가 없어 `defaultYear`를 붙였는지. 해 넘김 보정 대상이다. */
   yearless: boolean;
@@ -326,6 +327,7 @@ export function parseStatement(rows: readonly RawRow[], options: ParseOptions = 
       merchant,
       issuerCategory: (cells.issuerCategory ?? '').trim(),
       paymentTypeText: cells.paymentType ?? '',
+      overseas: format.isOverseas?.(cells) ?? false,
       cancelled: false,
       yearless,
     });
@@ -349,7 +351,7 @@ export function parseStatement(rows: readonly RawRow[], options: ParseOptions = 
       category: match.category,
       paymentType: parsePaymentType(entry.paymentTypeText),
     };
-    return tx;
+    return entry.overseas ? { ...tx, overseas: true } : tx;
   });
 
   issues.sort((a, b) => a.row - b.row);

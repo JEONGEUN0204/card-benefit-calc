@@ -1,9 +1,9 @@
 {
-  "name": "card-benefit-calc",
+  "name": "sunhalin",
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "전월실적 제외까지 반영한 신용카드 혜택 시뮬레이터",
+  "description": "순할인 — 전월실적에서 빠지는 것까지 반영한 신용카드 실제 할인액 계산기",
   "scripts": {
     "start": "vite",
     "dev": "vite",

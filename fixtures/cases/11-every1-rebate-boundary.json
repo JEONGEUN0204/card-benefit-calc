@@ -1,0 +1,48 @@
+{
+  "id": "11-every1-rebate-boundary",
+  "description": "카드의정석 EVERY 1 월정액의 구간 경계. 1월: 전월 1,999,999는 200만에 1원 모자라 150만 구간 → 월정액 15,000. 2,000,000×1%=20,000 → 합 35,000, 실적 2,000,000. 2월: 전월이 정확히 2,000,000이라 200만 구간(\"이상\"은 경계 포함) → 월정액 20,000. 499,999×1%=4,999.99 → 원 단위 절사 4,999 → 합 24,999, 실적 499,999. 3월: 전월 499,999는 50만에 1원 모자라 월정액 0. 500,000×1%=5,000 → 합 5,000.",
+  "card": "woori-every1",
+  "initialPrevSpending": 1999999,
+  "transactions": [
+    { "id": "a1", "date": "2026-01-10", "amount": 2000000, "merchant": "대한항공", "category": "travel" },
+    { "id": "b1", "date": "2026-02-10", "amount": 499999, "merchant": "롯데마트", "category": "mart" },
+    { "id": "c1", "date": "2026-03-10", "amount": 500000, "merchant": "롯데마트", "category": "mart" }
+  ],
+  "expect": {
+    "months": [
+      {
+        "month": "2026-01",
+        "tierMin": 1500000,
+        "prevSpending": 1999999,
+        "rebate": 15000,
+        "totalDiscount": 35000,
+        "countedSpending": 2000000,
+        "transactions": {
+          "a1": { "discount": 20000, "reason": "ok", "cappedBy": null, "appliedBenefitId": "every-1pct", "countedSpending": 2000000 }
+        }
+      },
+      {
+        "month": "2026-02",
+        "tierMin": 2000000,
+        "prevSpending": 2000000,
+        "rebate": 20000,
+        "totalDiscount": 24999,
+        "countedSpending": 499999,
+        "transactions": {
+          "b1": { "discount": 4999, "reason": "ok", "cappedBy": null, "appliedBenefitId": "every-1pct", "countedSpending": 499999 }
+        }
+      },
+      {
+        "month": "2026-03",
+        "tierMin": 0,
+        "prevSpending": 499999,
+        "rebate": 0,
+        "totalDiscount": 5000,
+        "countedSpending": 500000,
+        "transactions": {
+          "c1": { "discount": 5000, "reason": "ok", "cappedBy": null, "appliedBenefitId": "every-1pct", "countedSpending": 500000 }
+        }
+      }
+    ]
+  }
+}

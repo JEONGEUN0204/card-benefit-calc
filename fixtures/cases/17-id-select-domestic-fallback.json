@@ -1,0 +1,34 @@
+{
+  "id": "17-id-select-domestic-fallback",
+  "description": "삼성 iD SELECT ALL, SELECT 1을 국내 가맹점 0.7%(한도 없음)로, SELECT 2를 음식점·편의점·할인점·주유 7%로 고른 경우. 1월(전월 1,200,000 → 120만 구간, 7%는 월 15,000, 0.7%와 해외 2%는 한도 없음). t1 이마트 200,000: 0.7%(1,400)와 7%(14,000)가 함께 걸리지만 같은 우선순위에서는 할인액이 큰 쪽이 먼저라 7%=14,000 — 약관의 \"할인 혜택이 큰 금액만 적용\"과 같은 결과다. t2 CU 50,000: 7%는 3,500을 요구하지만 남은 한도가 1,000뿐이라 1,000(benefit). t3 GS25 20,000: 7% 한도가 비어 막히고, 다음 후보인 0.7%가 붙어 140 — 한도 없는 혜택이 받침이 되는 자리다. t4 스타벅스 10,000: 커피전문점은 7% 대상이 아니라 0.7%=70. t5 넷플릭스 13,500: 50%=6,750이 월 한도 5,000에 잘림(benefit). t6 해외 100,000: 0.7%는 국내 전용이라 걸리지 않고 해외 2%=2,000, 한도가 없어 잘리지 않는다. 합 14,000+1,000+140+70+5,000+2,000=22,210. 실적은 7%로 할인받은 t1·t2만 전액 빠지고(full), 0.7%·디지털 50%·해외 2%는 전월 이용금액 제외 목록에 없어 그대로 남는다(none) — 20,000+10,000+13,500+100,000=143,500.",
+  "card": "samsung-id-select-all",
+  "choices": { "select1": "domestic", "select2": "daily" },
+  "initialPrevSpending": 1200000,
+  "transactions": [
+    { "id": "t1", "date": "2026-01-03", "amount": 200000, "merchant": "이마트 성수점", "category": "mart" },
+    { "id": "t2", "date": "2026-01-05", "amount": 50000, "merchant": "CU 성수점", "category": "convenience" },
+    { "id": "t3", "date": "2026-01-07", "amount": 20000, "merchant": "GS25 왕십리점", "category": "convenience" },
+    { "id": "t4", "date": "2026-01-10", "amount": 10000, "merchant": "스타벅스 강남2호점", "category": "cafe" },
+    { "id": "t5", "date": "2026-01-15", "amount": 13500, "merchant": "넷플릭스", "category": "etc" },
+    { "id": "t6", "date": "2026-01-20", "amount": 100000, "merchant": "AMAZON.COM", "category": "online", "overseas": true }
+  ],
+  "expect": {
+    "months": [
+      {
+        "month": "2026-01",
+        "tierMin": 1200000,
+        "prevSpending": 1200000,
+        "totalDiscount": 22210,
+        "countedSpending": 143500,
+        "transactions": {
+          "t1": { "discount": 14000, "reason": "ok", "cappedBy": null, "appliedBenefitId": "select2-daily", "countedSpending": 0 },
+          "t2": { "discount": 1000, "reason": "ok", "cappedBy": "benefit", "appliedBenefitId": "select2-daily", "countedSpending": 0 },
+          "t3": { "discount": 140, "reason": "ok", "cappedBy": null, "appliedBenefitId": "select1-domestic", "countedSpending": 20000 },
+          "t4": { "discount": 70, "reason": "ok", "cappedBy": null, "appliedBenefitId": "select1-domestic", "countedSpending": 10000 },
+          "t5": { "discount": 5000, "reason": "ok", "cappedBy": "benefit", "appliedBenefitId": "digital", "countedSpending": 13500 },
+          "t6": { "discount": 2000, "reason": "ok", "cappedBy": null, "appliedBenefitId": "overseas", "countedSpending": 100000 }
+        }
+      }
+    ]
+  }
+}

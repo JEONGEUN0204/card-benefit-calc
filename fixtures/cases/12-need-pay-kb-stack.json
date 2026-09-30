@@ -1,0 +1,51 @@
+{
+  "id": "12-need-pay-kb-stack",
+  "description": "NEED Pay 카드, 간편결제를 KB Pay로 고른 경우. 1월(전월 800,000 → 80만 구간). k1 KB Pay 무신사 10,000: KB Pay 15%=1,500 + 패션몰 5%=500 중복 → 2,000. k2 KB Pay 이마트 100,000: 15%=15,000이지만 건당 3,000(perTransaction). k3 네이버페이 쿠팡: 네이버페이를 고르지 않아 noMatch, 실적 50,000. k4 NETFLIX 17,000: 30%=5,100 → 건당 3,000. k5 넷플릭스 17,000: 건당 3,000이지만 월 5,000 중 2,000만 남아 2,000(benefit). k6 넷플릭스 10,000: 한도 소진(benefitCapReached), 할인 없으니 실적 10,000. k7 KB Pay 무신사 200,000: KB Pay 30,000 → 건당 3,000(perTransaction) + 패션몰 10,000이지만 월 5,000 중 4,500 남음(benefit) → 7,500. k8 KB Pay 국세청(tax): 할인 제외라 noMatch, 실적 제외라 0. k9 무이자할부: 할인·실적 모두 제외. 합 2,000+3,000+3,000+2,000+7,500=17,500, 실적 50,000+10,000=60,000(할인받은 건은 전액 제외). 2월(전월 60,000 → 40만 미만): 같은 KB Pay 무신사가 tierLocked, 실적 10,000.",
+  "card": "kb-need-pay",
+  "choices": { "pay": "kbpay" },
+  "initialPrevSpending": 800000,
+  "transactions": [
+    { "id": "k1", "date": "2026-01-03", "amount": 10000, "merchant": "KB Pay 무신사", "category": "online" },
+    { "id": "k2", "date": "2026-01-05", "amount": 100000, "merchant": "KB Pay 이마트", "category": "mart" },
+    { "id": "k3", "date": "2026-01-06", "amount": 50000, "merchant": "네이버페이 쿠팡", "category": "online" },
+    { "id": "k4", "date": "2026-01-07", "amount": 17000, "merchant": "NETFLIX.COM", "category": "etc" },
+    { "id": "k5", "date": "2026-01-08", "amount": 17000, "merchant": "넷플릭스", "category": "etc" },
+    { "id": "k6", "date": "2026-01-09", "amount": 10000, "merchant": "넷플릭스", "category": "etc" },
+    { "id": "k7", "date": "2026-01-10", "amount": 200000, "merchant": "KB Pay 무신사", "category": "online" },
+    { "id": "k8", "date": "2026-01-12", "amount": 300000, "merchant": "KB Pay 국세청", "category": "tax" },
+    { "id": "k9", "date": "2026-01-15", "amount": 600000, "merchant": "KB Pay 하이마트", "category": "etc", "paymentType": "interestFreeInstallment" },
+    { "id": "f1", "date": "2026-02-03", "amount": 10000, "merchant": "KB Pay 무신사", "category": "online" }
+  ],
+  "expect": {
+    "months": [
+      {
+        "month": "2026-01",
+        "tierMin": 800000,
+        "prevSpending": 800000,
+        "totalDiscount": 17500,
+        "countedSpending": 60000,
+        "transactions": {
+          "k1": { "discount": 2000, "reason": "ok", "cappedBy": null, "appliedBenefitId": "kbpay", "stacked": [{ "benefitId": "fashion", "discount": 500 }], "countedSpending": 0 },
+          "k2": { "discount": 3000, "reason": "ok", "cappedBy": "perTransaction", "appliedBenefitId": "kbpay", "stacked": null, "countedSpending": 0 },
+          "k3": { "discount": 0, "reason": "noMatch", "appliedBenefitId": null, "countedSpending": 50000 },
+          "k4": { "discount": 3000, "reason": "ok", "cappedBy": "perTransaction", "appliedBenefitId": "digital", "stacked": null, "countedSpending": 0 },
+          "k5": { "discount": 2000, "reason": "ok", "cappedBy": "benefit", "appliedBenefitId": "digital", "countedSpending": 0 },
+          "k6": { "discount": 0, "reason": "benefitCapReached", "appliedBenefitId": null, "countedSpending": 10000 },
+          "k7": { "discount": 7500, "reason": "ok", "cappedBy": "perTransaction", "appliedBenefitId": "kbpay", "stacked": [{ "benefitId": "fashion", "discount": 4500, "cappedBy": "benefit" }], "countedSpending": 0 },
+          "k8": { "discount": 0, "reason": "noMatch", "appliedBenefitId": null, "countedSpending": 0 },
+          "k9": { "discount": 0, "reason": "noMatch", "appliedBenefitId": null, "countedSpending": 0 }
+        }
+      },
+      {
+        "month": "2026-02",
+        "tierMin": 0,
+        "prevSpending": 60000,
+        "totalDiscount": 0,
+        "countedSpending": 10000,
+        "transactions": {
+          "f1": { "discount": 0, "reason": "tierLocked", "appliedBenefitId": null, "countedSpending": 10000 }
+        }
+      }
+    ]
+  }
+}

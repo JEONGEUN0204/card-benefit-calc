@@ -5,6 +5,7 @@
   "annualFee": 30000,
   "rounding": "floor10",
   "sourceNote": "가상의 카드다. 통합 할인한도와 실적 제외 방식이 혜택마다 다른 구조를 재현한다.",
+  "art": { "bg": "#2f3b57", "fg": "#ffffff" },
   "tiers": [
     { "min": 0, "label": "실적 미달" },
     { "min": 300000, "label": "30만원 이상" },

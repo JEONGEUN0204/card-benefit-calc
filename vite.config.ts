@@ -36,6 +36,23 @@ function contentSecurityPolicy(): Plugin {
 }
 
 export default defineConfig({
+  /**
+   * GitHub Pages는 `/card-benefit-calc/` 아래에 서므로 배포 워크플로가 BASE_PATH로 넘긴다.
+   * 페이지 사이 링크는 상대 경로(`app/`, `../`)라 base와 무관하게 맞는다.
+   */
+  base: process.env.BASE_PATH ?? '/',
   plugins: [react(), contentSecurityPolicy()],
-  build: { outDir: 'dist' },
+  build: {
+    outDir: 'dist',
+    /**
+     * HTML 진입점이 둘이다. 홈(`/`)은 서비스 소개, 계산기는 `/app/`이다.
+     * 소개 페이지는 스크립트가 없는 정적 페이지라 CSP를 그대로 통과한다.
+     */
+    rollupOptions: {
+      input: {
+        landing: 'index.html',
+        app: 'app/index.html',
+      },
+    },
+  },
 });

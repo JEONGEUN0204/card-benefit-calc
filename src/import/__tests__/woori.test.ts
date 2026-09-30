@@ -43,6 +43,13 @@ describe('우리카드 이용대금명세서', () => {
     expect(got.transactions.find((t) => t.merchant === 'GS25 역삼점')?.paymentType).toBe('lump');
   });
 
+  it('매출구분의 국외로 해외 결제를 표시한다. 국내 결제에는 표시가 없다', () => {
+    expect(got.transactions.filter((t) => t.overseas === true).map((t) => t.merchant)).toEqual([
+      'NETFLIX.COM',
+    ]);
+    expect(got.transactions.find((t) => t.merchant === 'GS25 역삼점')).not.toHaveProperty('overseas');
+  });
+
   it('행마다 왜 거래로 읽지 않았는지 남긴다', () => {
     expect(got.issues.map((i) => [i.row, i.kind])).toEqual([
       [6, 'partiallyCancelled'],

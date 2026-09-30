@@ -1,0 +1,49 @@
+{
+  "id": "13-need-pay-naver-cap",
+  "description": "NEED Pay 카드, 간편결제를 네이버페이로 고른 경우. 1월(전월 정확히 400,000 → 40만 구간, 네이버페이 월 10,000·건당 2,000). n1 네이버페이 네이버플러스 멤버십 4,900: 네이버페이 10%=490이 대표, 디지털 30%=1,470이 중복 → 1,960. n2 KB Pay 무신사 10,000: KB Pay를 고르지 않아 패션몰 5%=500만 붙고 그것이 대표(중복 없음). n3~n6 네이버페이 쿠팡 20,000 × 4: 10%=2,000(건당 한도와 같아 잘림 없음)씩 → 네이버페이 누적 490+8,000=8,490. n7 같은 20,000: 월 10,000 중 1,510만 남아 1,510(benefit). n8: 한도 소진(benefitCapReached), 실적 20,000. 합 1,960+500+8,000+1,510=11,970. 할인받은 건은 전액 실적 제외라 1월 실적은 n8의 20,000뿐. 2월(전월 20,000 → 40만 미만): 네이버페이 결제가 tierLocked.",
+  "card": "kb-need-pay",
+  "choices": { "pay": "naverpay" },
+  "initialPrevSpending": 400000,
+  "transactions": [
+    { "id": "n1", "date": "2026-01-02", "amount": 4900, "merchant": "네이버페이 네이버플러스 멤버십", "category": "etc" },
+    { "id": "n2", "date": "2026-01-03", "amount": 10000, "merchant": "KB Pay 무신사", "category": "online" },
+    { "id": "n3", "date": "2026-01-04", "amount": 20000, "merchant": "네이버페이 쿠팡", "category": "online" },
+    { "id": "n4", "date": "2026-01-05", "amount": 20000, "merchant": "네이버페이 쿠팡", "category": "online" },
+    { "id": "n5", "date": "2026-01-06", "amount": 20000, "merchant": "네이버페이 쿠팡", "category": "online" },
+    { "id": "n6", "date": "2026-01-07", "amount": 20000, "merchant": "네이버페이 쿠팡", "category": "online" },
+    { "id": "n7", "date": "2026-01-08", "amount": 20000, "merchant": "네이버페이 쿠팡", "category": "online" },
+    { "id": "n8", "date": "2026-01-09", "amount": 20000, "merchant": "네이버페이 쿠팡", "category": "online" },
+    { "id": "g1", "date": "2026-02-03", "amount": 20000, "merchant": "네이버페이 쿠팡", "category": "online" }
+  ],
+  "expect": {
+    "months": [
+      {
+        "month": "2026-01",
+        "tierMin": 400000,
+        "prevSpending": 400000,
+        "totalDiscount": 11970,
+        "countedSpending": 20000,
+        "transactions": {
+          "n1": { "discount": 1960, "reason": "ok", "cappedBy": null, "appliedBenefitId": "naverpay", "stacked": [{ "benefitId": "digital", "discount": 1470 }], "countedSpending": 0 },
+          "n2": { "discount": 500, "reason": "ok", "cappedBy": null, "appliedBenefitId": "fashion", "stacked": null, "countedSpending": 0 },
+          "n3": { "discount": 2000, "reason": "ok", "cappedBy": null, "appliedBenefitId": "naverpay", "countedSpending": 0 },
+          "n4": { "discount": 2000, "reason": "ok", "cappedBy": null, "appliedBenefitId": "naverpay", "countedSpending": 0 },
+          "n5": { "discount": 2000, "reason": "ok", "cappedBy": null, "appliedBenefitId": "naverpay", "countedSpending": 0 },
+          "n6": { "discount": 2000, "reason": "ok", "cappedBy": null, "appliedBenefitId": "naverpay", "countedSpending": 0 },
+          "n7": { "discount": 1510, "reason": "ok", "cappedBy": "benefit", "appliedBenefitId": "naverpay", "countedSpending": 0 },
+          "n8": { "discount": 0, "reason": "benefitCapReached", "appliedBenefitId": null, "countedSpending": 20000 }
+        }
+      },
+      {
+        "month": "2026-02",
+        "tierMin": 0,
+        "prevSpending": 20000,
+        "totalDiscount": 0,
+        "countedSpending": 20000,
+        "transactions": {
+          "g1": { "discount": 0, "reason": "tierLocked", "appliedBenefitId": null, "countedSpending": 20000 }
+        }
+      }
+    ]
+  }
+}

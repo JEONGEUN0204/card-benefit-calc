@@ -5,6 +5,7 @@
   "annualFee": 15000,
   "rounding": "floor10",
   "sourceNote": "가상의 카드다. 실제 약관을 확보하면 교체한다.",
+  "art": { "bg": "#3f6b4f", "fg": "#ffffff" },
   "tiers": [
     { "min": 0, "label": "실적 미달" },
     { "min": 300000, "label": "30만원 이상" }

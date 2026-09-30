@@ -46,17 +46,33 @@ export function countedSpendingOf(
     return tx.amount;
   }
 
-  const benefit = rule.benefits.find((b) => b.id === discount.appliedBenefitId);
-  if (benefit === undefined) return tx.amount;
-
-  switch (benefit.excludeFromSpending) {
-    case 'full':
-      return 0;
-    case 'discountOnly':
-      return tx.amount - discount.discount;
-    case 'none':
-      return tx.amount;
+  /*
+   * 중복 혜택이 겹쳐 붙었다면 붙은 혜택마다 제외 방식을 본다. 하나라도 전액 제외면 결제 건
+   * 전체가 빠지고, 아니면 할인액만 제외인 혜택들의 할인액을 뺀다.
+   */
+  const parts = [
+    { benefitId: discount.appliedBenefitId, discount: discount.discount - stackedSum(discount) },
+    ...(discount.stacked ?? []),
+  ];
+  let excluded = 0;
+  for (const part of parts) {
+    const benefit = rule.benefits.find((b) => b.id === part.benefitId);
+    if (benefit === undefined) continue;
+    switch (benefit.excludeFromSpending) {
+      case 'full':
+        return 0;
+      case 'discountOnly':
+        excluded += part.discount;
+        break;
+      case 'none':
+        break;
+    }
   }
+  return tx.amount - excluded;
+}
+
+function stackedSum(discount: TxDiscount): Won {
+  return (discount.stacked ?? []).reduce((sum, part) => sum + part.discount, 0);
 }
 
 export interface SpendingResult {

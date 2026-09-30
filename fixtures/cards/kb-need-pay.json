@@ -1,0 +1,430 @@
+{
+  "id": "kb-need-pay",
+  "name": "NEED Pay 카드",
+  "issuer": "KB국민카드",
+  "annualFee": 19000,
+  "rounding": "floor1",
+  "sourceNote": "출처: KB국민카드 상품 안내(m.kbcard.com/CRD/DVIEW/MCAMCXHIACRC0002, 여신금융협회 심의필 제2026-C1a-02460호)의 '주요혜택' 팝업 다섯 장. 상품설명서 PDF는 보지 못했다. 실적 제외는 문구가 분명하다: \"전월 이용실적 제외 대상: ‘KB NEED Pay 카드’ 할인 적용 받은 매출, (부분)무이자할부 이용금액, … 상품권 및 선불카드 구입·충전 금액, 아파트관리비, … 국세, 지방세, 공과금, 도시가스, 4대 사회보험료, 각종 수수료 및 이자, 연체료, 연회비, 무승인전표, 취소금액\". 할인 제외 대상도 거의 같은 목록이다. 할인액 절사 방식은 적혀 있지 않아 원 단위(floor1)로 두었다. 담지 못한 조건: (1) '전월실적 채워드림'(전월 35만~40만원일 때 신청하면 40만원 구간 혜택, 반기 1회)은 신청해야 켜지는 서비스라 뺐다. (2) 신규 발급 실적유예(사용등록일부터 다음 달 말일까지 40만원 구간 한도의 50%)는 달을 세는 조건이라 뺐다. (3) 유치원·초중고 학교 납입금, 신차구매, 무승인전표는 가맹점명으로 가를 수 없어 제외 목록에 넣지 않았다.",
+  "tiers": [
+    {
+      "min": 0,
+      "label": "40만원 미만"
+    },
+    {
+      "min": 400000,
+      "label": "40만원 이상"
+    },
+    {
+      "min": 800000,
+      "label": "80만원 이상"
+    }
+  ],
+  "choices": [
+    {
+      "id": "pay",
+      "label": "자주 쓰는 간편결제",
+      "options": [
+        {
+          "id": "kbpay",
+          "label": "KB Pay 15%"
+        },
+        {
+          "id": "naverpay",
+          "label": "네이버페이 10%"
+        },
+        {
+          "id": "kakaopay",
+          "label": "카카오페이 10%"
+        },
+        {
+          "id": "tosspay",
+          "label": "토스페이 10%"
+        }
+      ]
+    }
+  ],
+  "spendingExclusions": [
+    {
+      "kind": "category",
+      "values": [
+        "tax",
+        "utility",
+        "giftCard"
+      ]
+    },
+    {
+      "kind": "merchant",
+      "values": [
+        "관리비",
+        "임대료",
+        "등록금",
+        "보육료",
+        "상품권",
+        "기프트카드",
+        "선불카드",
+        "연회비",
+        "국민건강보험",
+        "국민연금",
+        "고용보험",
+        "산재보험"
+      ]
+    },
+    {
+      "kind": "paymentType",
+      "values": [
+        "interestFreeInstallment"
+      ]
+    }
+  ],
+  "benefits": [
+    {
+      "id": "kbpay",
+      "label": "KB Pay 15% 할인",
+      "match": {
+        "merchants": [
+          "KB Pay",
+          "KBPay",
+          "KB페이"
+        ],
+        "excludeCategories": [
+          "tax",
+          "utility",
+          "giftCard"
+        ],
+        "excludeMerchants": [
+          "관리비",
+          "임대료",
+          "등록금",
+          "보육료",
+          "상품권",
+          "기프트카드",
+          "선불카드",
+          "연회비",
+          "국민건강보험",
+          "국민연금",
+          "고용보험",
+          "산재보험"
+        ],
+        "excludePaymentTypes": [
+          "interestFreeInstallment"
+        ],
+        "overseas": false
+      },
+      "discount": {
+        "type": "rate",
+        "rate": 0.15
+      },
+      "perTransactionCap": 3000,
+      "monthlyCapByTier": {
+        "0": 0,
+        "400000": 15000,
+        "800000": 30000
+      },
+      "choice": {
+        "group": "pay",
+        "option": "kbpay"
+      },
+      "excludeFromSpending": "full",
+      "sourceNote": "\"4개 Pay중 택1 / KB Pay 15%, 네이버페이·카카오페이·토스페이 10% / 국내 온·오프라인가맹점 이용 시 제공\", 월 할인한도 표 \"건당할인한도 KB Pay 3천원, 그 외 2천원 / 40만원 이상 80만원 미만 KB Pay 1만5천원·그 외 1만원, 80만원 이상 KB Pay 3만원·그 외 2만원\". 명세서에 결제수단이 따로 찍히지 않으므로 가맹점명에 페이 이름이 들어간 거래만 맞춘다. KB Pay는 가맹점 결제 앱이라 명세서에 가맹점명만 찍힐 가능성이 크다 — 실제 KB 명세서로 확인하기 전까지 이 혜택은 적게 잡힐 수 있다. \"국내 온·오프라인가맹점 이용 시 제공\"이라 해외 결제는 뺀다(match.overseas: false)."
+    },
+    {
+      "id": "naverpay",
+      "label": "네이버페이 10% 할인",
+      "match": {
+        "merchants": [
+          "네이버페이",
+          "NAVERPAY",
+          "NAVER PAY"
+        ],
+        "excludeCategories": [
+          "tax",
+          "utility",
+          "giftCard"
+        ],
+        "excludeMerchants": [
+          "관리비",
+          "임대료",
+          "등록금",
+          "보육료",
+          "상품권",
+          "기프트카드",
+          "선불카드",
+          "연회비",
+          "국민건강보험",
+          "국민연금",
+          "고용보험",
+          "산재보험"
+        ],
+        "excludePaymentTypes": [
+          "interestFreeInstallment"
+        ],
+        "overseas": false
+      },
+      "discount": {
+        "type": "rate",
+        "rate": 0.1
+      },
+      "perTransactionCap": 2000,
+      "monthlyCapByTier": {
+        "0": 0,
+        "400000": 10000,
+        "800000": 20000
+      },
+      "choice": {
+        "group": "pay",
+        "option": "naverpay"
+      },
+      "excludeFromSpending": "full",
+      "sourceNote": "\"4개 Pay중 택1 / KB Pay 15%, 네이버페이·카카오페이·토스페이 10% / 국내 온·오프라인가맹점 이용 시 제공\", 월 할인한도 표 \"건당할인한도 KB Pay 3천원, 그 외 2천원 / 40만원 이상 80만원 미만 KB Pay 1만5천원·그 외 1만원, 80만원 이상 KB Pay 3만원·그 외 2만원\". 명세서에 결제수단이 따로 찍히지 않으므로 가맹점명에 페이 이름이 들어간 거래만 맞춘다. \"국내 온·오프라인가맹점 이용 시 제공\"이라 해외 결제는 뺀다(match.overseas: false)."
+    },
+    {
+      "id": "kakaopay",
+      "label": "카카오페이 10% 할인",
+      "match": {
+        "merchants": [
+          "카카오페이",
+          "KAKAOPAY",
+          "KAKAO PAY"
+        ],
+        "excludeCategories": [
+          "tax",
+          "utility",
+          "giftCard"
+        ],
+        "excludeMerchants": [
+          "관리비",
+          "임대료",
+          "등록금",
+          "보육료",
+          "상품권",
+          "기프트카드",
+          "선불카드",
+          "연회비",
+          "국민건강보험",
+          "국민연금",
+          "고용보험",
+          "산재보험"
+        ],
+        "excludePaymentTypes": [
+          "interestFreeInstallment"
+        ],
+        "overseas": false
+      },
+      "discount": {
+        "type": "rate",
+        "rate": 0.1
+      },
+      "perTransactionCap": 2000,
+      "monthlyCapByTier": {
+        "0": 0,
+        "400000": 10000,
+        "800000": 20000
+      },
+      "choice": {
+        "group": "pay",
+        "option": "kakaopay"
+      },
+      "excludeFromSpending": "full",
+      "sourceNote": "\"4개 Pay중 택1 / KB Pay 15%, 네이버페이·카카오페이·토스페이 10% / 국내 온·오프라인가맹점 이용 시 제공\", 월 할인한도 표 \"건당할인한도 KB Pay 3천원, 그 외 2천원 / 40만원 이상 80만원 미만 KB Pay 1만5천원·그 외 1만원, 80만원 이상 KB Pay 3만원·그 외 2만원\". 명세서에 결제수단이 따로 찍히지 않으므로 가맹점명에 페이 이름이 들어간 거래만 맞춘다. \"국내 온·오프라인가맹점 이용 시 제공\"이라 해외 결제는 뺀다(match.overseas: false)."
+    },
+    {
+      "id": "tosspay",
+      "label": "토스페이 10% 할인",
+      "match": {
+        "merchants": [
+          "토스페이",
+          "TOSSPAY",
+          "TOSS PAY"
+        ],
+        "excludeCategories": [
+          "tax",
+          "utility",
+          "giftCard"
+        ],
+        "excludeMerchants": [
+          "관리비",
+          "임대료",
+          "등록금",
+          "보육료",
+          "상품권",
+          "기프트카드",
+          "선불카드",
+          "연회비",
+          "국민건강보험",
+          "국민연금",
+          "고용보험",
+          "산재보험"
+        ],
+        "excludePaymentTypes": [
+          "interestFreeInstallment"
+        ],
+        "overseas": false
+      },
+      "discount": {
+        "type": "rate",
+        "rate": 0.1
+      },
+      "perTransactionCap": 2000,
+      "monthlyCapByTier": {
+        "0": 0,
+        "400000": 10000,
+        "800000": 20000
+      },
+      "choice": {
+        "group": "pay",
+        "option": "tosspay"
+      },
+      "excludeFromSpending": "full",
+      "sourceNote": "\"4개 Pay중 택1 / KB Pay 15%, 네이버페이·카카오페이·토스페이 10% / 국내 온·오프라인가맹점 이용 시 제공\", 월 할인한도 표 \"건당할인한도 KB Pay 3천원, 그 외 2천원 / 40만원 이상 80만원 미만 KB Pay 1만5천원·그 외 1만원, 80만원 이상 KB Pay 3만원·그 외 2만원\". 명세서에 결제수단이 따로 찍히지 않으므로 가맹점명에 페이 이름이 들어간 거래만 맞춘다. \"국내 온·오프라인가맹점 이용 시 제공\"이라 해외 결제는 뺀다(match.overseas: false)."
+    },
+    {
+      "id": "digital",
+      "label": "디지털 콘텐츠·멤버십 30% 할인",
+      "match": {
+        "merchants": [
+          "넷플릭스",
+          "NETFLIX",
+          "유튜브",
+          "YOUTUBE",
+          "디즈니",
+          "DISNEY",
+          "티빙",
+          "TVING",
+          "웨이브",
+          "WAVVE",
+          "스포티파이",
+          "SPOTIFY",
+          "네이버플러스",
+          "컬리멤버스",
+          "배민클럽"
+        ],
+        "excludeCategories": [
+          "tax",
+          "utility",
+          "giftCard"
+        ],
+        "excludeMerchants": [
+          "관리비",
+          "임대료",
+          "등록금",
+          "보육료",
+          "상품권",
+          "기프트카드",
+          "선불카드",
+          "연회비",
+          "국민건강보험",
+          "국민연금",
+          "고용보험",
+          "산재보험"
+        ],
+        "excludePaymentTypes": [
+          "interestFreeInstallment"
+        ]
+      },
+      "discount": {
+        "type": "rate",
+        "rate": 0.3
+      },
+      "perTransactionCap": 3000,
+      "monthlyCapByTier": {
+        "0": 0,
+        "400000": 5000,
+        "800000": 5000
+      },
+      "stackable": true,
+      "excludeFromSpending": "full",
+      "sourceNote": "\"디지털 콘텐츠: 넷플릭스, 유튜브, 디즈니플러스, 티빙, 웨이브, 스포티파이 / 멤버십: 네이버플러스 멤버십, 컬리멤버스, 배민클럽 / 공식 홈페이지를 통한 정기결제 이용권 결제 시 제공\", 건당할인한도 3천원, 월 할인한도 5천원(두 구간 같음). \"네이버플러스멤버십을 네이버페이로 결제 시 자주 쓰는 간편결제 할인(네이버페이)과 중복 적용 가능\"이라 stackable. 인앱결제·단건결제 제외, 간편결제 이용 시 제외(네이버페이·컬리페이·배민페이로 낸 해당 멤버십은 예외), 유튜브는 프리미엄만 — 명세서로 가를 수 없어 반영하지 않았다."
+    },
+    {
+      "id": "fashion",
+      "label": "온라인 패션몰 5% 할인",
+      "match": {
+        "merchants": [
+          "무신사",
+          "MUSINSA",
+          "지그재그",
+          "ZIGZAG",
+          "W컨셉",
+          "WCONCEPT",
+          "29CM",
+          "에이블리",
+          "ABLY"
+        ],
+        "excludeCategories": [
+          "tax",
+          "utility",
+          "giftCard"
+        ],
+        "excludeMerchants": [
+          "관리비",
+          "임대료",
+          "등록금",
+          "보육료",
+          "상품권",
+          "기프트카드",
+          "선불카드",
+          "연회비",
+          "국민건강보험",
+          "국민연금",
+          "고용보험",
+          "산재보험"
+        ],
+        "excludePaymentTypes": [
+          "interestFreeInstallment"
+        ]
+      },
+      "discount": {
+        "type": "rate",
+        "rate": 0.05
+      },
+      "monthlyCapByTier": {
+        "0": 0,
+        "400000": 5000,
+        "800000": 5000
+      },
+      "stackable": true,
+      "excludeFromSpending": "full",
+      "sourceNote": "\"무신사, 지그재그, W컨셉, 29CM, 에이블리에서 KB Pay로 결제한 이용 건 / 공식 홈페이지/모바일 앱 결제 시 제공(오프라인 매장 결제 제외) / 자주 쓰는 간편결제 할인(KB Pay)과 중복 적용 가능\", 월 할인한도 5천원(두 구간 같음). 중복 적용이라 stackable. 'KB Pay로 결제'는 명세서로 가를 수 없어 가맹점명으로만 맞춘다 — 다른 수단으로 결제한 건도 할인으로 잡힐 수 있다."
+    },
+    {
+      "id": "overseas",
+      "label": "해외 가맹점 2% 할인",
+      "match": {
+        "excludeCategories": [
+          "tax",
+          "utility",
+          "giftCard"
+        ],
+        "excludeMerchants": [
+          "관리비",
+          "임대료",
+          "등록금",
+          "보육료",
+          "상품권",
+          "기프트카드",
+          "선불카드",
+          "연회비",
+          "국민건강보험",
+          "국민연금",
+          "고용보험",
+          "산재보험"
+        ],
+        "excludePaymentTypes": [
+          "interestFreeInstallment"
+        ],
+        "overseas": true
+      },
+      "discount": {
+        "type": "rate",
+        "rate": 0.02
+      },
+      "monthlyCapByTier": {
+        "0": null,
+        "400000": null,
+        "800000": null
+      },
+      "excludeFromSpending": "full",
+      "sourceNote": "\"해외 온·오프라인 가맹점 이용 시 2% 할인 / ※ 할인한도 및 전월 이용실적 조건 없음 / ※ 해외 할인은 국내외겸용 카드에 한하여 제공\". 할인 제외 대상은 다른 혜택과 같다. 해외 여부는 명세서가 알려 줄 때만 잡힌다(우리카드의 '국외일시불'). KB 명세서의 해외 표기는 아직 확인하지 못해, KB 명세서에서는 이 할인이 잡히지 않는다."
+    }
+  ]
+}

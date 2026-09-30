@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <meta
+      name="description"
+      content="순할인 — 전월실적에서 빠지는 것까지 계산한 신용카드의 실제 할인액. 명세서는 브라우저 밖으로 나가지 않는다."
+    />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#f4f5f6" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#15171a" media="(prefers-color-scheme: dark)" />
+    <!-- 아이콘도 인라인이다. 빌드 CSP가 외부 요청을 막고, img-src에 data:만 열어 둔다. -->
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230b8a68' stroke-width='2' stroke-linecap='round'%3E%3Crect x='2' y='5' width='20' height='14' rx='3'/%3E%3Cpath d='M2 10h20'/%3E%3Cpath d='M6 15h4'/%3E%3C/svg%3E"
+    />
+    <link rel="stylesheet" href="/src/app/styles.css" />
+    <title>순할인 계산기 — 내 명세서로 계산한 실제 할인액</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <noscript>
+      <p class="noscript">
+        순할인은 결제내역을 서버로 보내지 않고 브라우저 안에서만 계산하기 때문에 자바스크립트가
+        필요합니다. 자바스크립트를 켜고 다시 열어 주세요.
+      </p>
+    </noscript>
+    <script type="module" src="/src/app/main.tsx"></script>
+  </body>
+</html>

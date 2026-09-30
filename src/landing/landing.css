@@ -1,0 +1,827 @@
+/*
+ * 랜딩 페이지 스타일.
+ *
+ * 색·모서리 값은 앱과 같은 tokens.css를 읽는다. 여기서 색을 새로 정하면 랜딩과 앱이
+ * 다른 서비스처럼 보인다.
+ *
+ * 글꼴도 tokens.css가 정한다. 폰트 파일은 저장소에 넣어 함께 실어 나른다 — 빌드 CSP가
+ * `font-src 'self'`라 외부 폰트 요청은 막히고, `style-src 'self'`라 인라인 스타일도
+ * 적용되지 않는다.
+ */
+@import '../app/tokens.css';
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  scroll-behavior: smooth;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.65;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+  letter-spacing: -0.025em;
+  line-height: 1.28;
+  text-wrap: balance;
+}
+
+p {
+  margin: 0;
+}
+
+code {
+  font-family: var(--font-mono);
+  font-size: 0.88em;
+  background: var(--surface-sunken);
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  padding: 0.05em 0.35em;
+}
+
+a {
+  color: var(--accent);
+}
+
+:focus-visible {
+  outline: 2px solid var(--mark);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+/* 상단 바가 고정이라, 앵커로 뛰면 제목이 바 뒤로 들어간다. */
+[id] {
+  scroll-margin-top: 4.5rem;
+}
+
+.wrap {
+  width: 100%;
+  max-width: 62rem;
+  margin-inline: auto;
+  padding-inline: 20px;
+}
+
+.skip {
+  position: absolute;
+  left: -9999px;
+}
+
+.skip:focus {
+  left: 20px;
+  top: 12px;
+  z-index: 10;
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-sm);
+  padding: 0.5rem 0.8rem;
+}
+
+/* ── 상단 바 ────────────────────────────────────────────────────────── */
+.bar {
+  position: sticky;
+  top: env(safe-area-inset-top, 0px);
+  z-index: 5;
+  background: var(--bar);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--line);
+}
+
+.bar-in {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem 1rem;
+  flex-wrap: wrap;
+  padding-block: 0.7rem;
+}
+
+.wordmark {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 1.08rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--accent);
+  margin-right: auto;
+}
+
+.beta {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.78rem;
+  color: var(--accent);
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-line);
+  border-radius: 999px;
+  padding: 0.22rem 0.62rem;
+}
+
+/* ── 버튼 ──────────────────────────────────────────────────────────── */
+.btn {
+  display: inline-block;
+  background: var(--accent);
+  color: var(--on-accent);
+  text-decoration: none;
+  font-weight: 650;
+  font-size: 0.95rem;
+  border: 1px solid transparent;
+  border-radius: var(--r-sm);
+  padding: 0.68rem 1.25rem;
+  box-shadow: var(--shadow-sm);
+  transition: background-color 0.15s ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .btn:hover {
+    background: var(--accent-hover);
+  }
+}
+
+.btn:active,
+.btn-ghost:active {
+  transform: scale(0.98);
+}
+
+.btn,
+.btn-ghost,
+a {
+  touch-action: manipulation;
+}
+
+.btn,
+.btn-ghost {
+  user-select: none;
+  -webkit-user-select: none;
+  transition: background 0.12s, transform 0.1s ease-out;
+}
+
+.btn-sm {
+  font-size: 0.85rem;
+  padding: 0.42rem 0.85rem;
+  box-shadow: none;
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--text);
+  border-color: var(--line-strong);
+  box-shadow: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .btn-ghost:hover {
+    background: var(--surface-sunken);
+  }
+}
+
+.cta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+/* ── 히어로 ────────────────────────────────────────────────────────── */
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  gap: 2rem clamp(2rem, 5vw, 4rem);
+  align-items: center;
+  padding-block: clamp(2.5rem, 7vw, 4.5rem) clamp(2rem, 5vw, 3.5rem);
+}
+
+/* 인용한 안내 문구는 넓은 화면에서 한 줄로 둔다. 좁은 화면에서는 넘치므로 풀어 준다. */
+@media (min-width: 641px) {
+  .hero h1 .keep {
+    white-space: nowrap;
+  }
+}
+
+.hero-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1.1rem;
+}
+
+/*
+ * 순액 원장. 계산기 할인 결과의 첫머리와 같은 모양이다(src/app/styles.css의 .net-row).
+ * 페이지에서 힘을 싣는 곳은 여기 하나다 — 안내문 금액에 줄을 긋고, 빠지는 몫을 인주색으로
+ * 빼고, 남는 순할인을 굵은 합계 괘선 아래 가장 크게 적는다.
+ */
+.net {
+  margin: 0;
+}
+
+.net figcaption {
+  margin-bottom: 0.4rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.net-ledger,
+.net-ledger dd {
+  margin: 0;
+}
+
+.net-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 1rem;
+  align-items: baseline;
+  padding-block: 0.65rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.net-row dt {
+  color: var(--text-2);
+}
+
+.net-row dt small {
+  display: block;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.net-row dd {
+  font-size: 1.1rem;
+  font-weight: 600;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.net-row dd.nominal {
+  color: var(--muted);
+  text-decoration: line-through;
+  text-decoration-thickness: 1.5px;
+}
+
+.net-row.loss dd {
+  color: var(--seal);
+}
+
+.net-row.result {
+  margin-top: -1px;
+  padding-top: 0.9rem;
+  border-top: 2px solid var(--text);
+  border-bottom: none;
+}
+
+.net-row.result dt {
+  color: var(--text);
+  font-weight: 700;
+}
+
+.net-row.result dd {
+  color: var(--accent);
+  font-size: clamp(2.4rem, 6vw, 3.4rem);
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  line-height: 1;
+}
+
+.hero h1 {
+  font-size: clamp(1.65rem, 4.6vw, 2.6rem);
+  letter-spacing: -0.035em;
+  max-width: 30ch;
+}
+
+.lede {
+  font-size: clamp(1rem, 1.6vw, 1.12rem);
+  color: var(--text-2);
+  max-width: 46ch;
+}
+
+.note {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+/* ── 섹션 공통 ─────────────────────────────────────────────────────── */
+.section {
+  border-top: 1px solid var(--line);
+  padding-block: clamp(2.2rem, 5vw, 3.4rem);
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.section h2 {
+  font-size: clamp(1.2rem, 2.4vw, 1.6rem);
+  max-width: 34ch;
+}
+
+.section h3 {
+  font-size: 0.98rem;
+  font-weight: 650;
+}
+
+.sect-lede {
+  color: var(--text-2);
+  max-width: 62ch;
+}
+
+.fineprint {
+  font-size: 0.82rem;
+  color: var(--muted);
+  max-width: 68ch;
+}
+
+/* ── 3개월 원장 ────────────────────────────────────────────────────── */
+.ledger {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.9rem;
+}
+
+/* 달마다 한 장씩, 상자 없이 굵은 괘선 아래 선다. 달의 상태는 칩이 말한다. */
+.month {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  padding-top: 0.9rem;
+  border-top: 2px solid var(--text);
+}
+
+.month-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.55rem;
+}
+
+.month-name {
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.chip {
+  font-size: 0.72rem;
+  font-weight: 650;
+  border-radius: 999px;
+  padding: 0.12rem 0.55rem;
+  border: 1px solid;
+}
+
+.chip-muted {
+  color: var(--muted);
+  background: var(--surface-sunken);
+  border-color: var(--line);
+}
+
+.chip-mark {
+  color: var(--accent);
+  background: var(--accent-soft);
+  border-color: var(--accent-line);
+}
+
+.chip-error {
+  color: var(--error);
+  background: var(--error-soft);
+  border-color: var(--error-line);
+}
+
+.rows {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.8rem;
+  padding-block: 0.3rem;
+  border-bottom: 1px dashed var(--line);
+  font-size: 0.88rem;
+}
+
+.row dt {
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.row dd {
+  margin: 0;
+  text-align: right;
+}
+
+/* 합계 줄은 회계 장부처럼 실선으로 끊는다. */
+.row:not(.row-total) + .row-total {
+  border-top: 1px solid var(--line-strong);
+  margin-top: 0.25rem;
+  padding-top: 0.45rem;
+}
+
+.row-total {
+  border-bottom: none;
+  font-size: 0.92rem;
+}
+
+.money {
+  font-variant-numeric: tabular-nums;
+}
+
+.strong {
+  font-weight: 700;
+}
+
+.mark {
+  color: var(--mark);
+}
+
+.warn {
+  color: var(--seal);
+}
+
+.dim {
+  color: var(--muted);
+}
+
+.carry {
+  margin-top: auto;
+  font-size: 0.8rem;
+  color: var(--muted);
+  border-top: 1px dashed var(--line);
+  padding-top: 0.6rem;
+}
+
+.carry-warn {
+  color: var(--seal);
+}
+
+/* ── 필요 결제액 분해 ──────────────────────────────────────────────── */
+.split {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.split-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.5rem 1rem;
+  font-weight: 650;
+}
+
+.split-head b {
+  font-size: clamp(1.3rem, 3vw, 1.9rem);
+  letter-spacing: -0.03em;
+}
+
+.split-bar {
+  display: flex;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-md);
+  overflow: hidden;
+}
+
+/* 300,000 : 71,000 — 폭이 곧 비율이다. */
+.split-kept {
+  flex: 300 0 0;
+  background: var(--accent-soft);
+  border-right: 1px solid var(--accent-line);
+  color: var(--accent);
+}
+
+.split-out {
+  flex: 71 0 0;
+  background: var(--seal-soft);
+  color: var(--seal);
+}
+
+.split-kept,
+.split-out {
+  padding: 0.7rem 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.split-bar i {
+  font-style: normal;
+  font-size: 0.74rem;
+  letter-spacing: 0.02em;
+}
+
+.split-bar b {
+  font-size: 0.95rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.split-note {
+  font-size: 0.85rem;
+  color: var(--muted);
+  max-width: 62ch;
+}
+
+/* ── 세 가지 답 ────────────────────────────────────────────────────── */
+.answers {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.4rem;
+}
+
+.answers li {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  border-top: 2px solid var(--accent-line);
+  padding-top: 0.8rem;
+}
+
+.answers p {
+  font-size: 0.9rem;
+  color: var(--text-2);
+}
+
+.example {
+  font-size: 0.84rem;
+  color: var(--muted);
+  margin-top: auto;
+}
+
+/* ── 약관 적용 범위 ────────────────────────────────────────────────── */
+.two-col {
+  display: grid;
+  grid-template-columns: 1.05fr 0.95fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.checks {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  font-size: 0.92rem;
+  color: var(--text-2);
+}
+
+.checks li {
+  padding-left: 1.5rem;
+  position: relative;
+  max-width: 62ch;
+}
+
+.checks li::before {
+  content: '✓';
+  position: absolute;
+  left: 0;
+  color: var(--mark);
+  font-weight: 700;
+}
+
+.reasons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  padding: 1.1rem;
+}
+
+.reasons p {
+  font-size: 0.88rem;
+  color: var(--text-2);
+}
+
+.tags {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.tags li {
+  font-size: 0.78rem;
+  color: var(--muted);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0.16rem 0.55rem;
+}
+
+/* ── 쓰는 순서 ─────────────────────────────────────────────────────── */
+.steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  counter-reset: step;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.4rem;
+}
+
+.steps li {
+  counter-increment: step;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.steps li::before {
+  content: counter(step);
+  display: grid;
+  place-items: center;
+  width: 1.9rem;
+  height: 1.9rem;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-line);
+  color: var(--accent);
+  font-size: 0.85rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.steps p {
+  font-size: 0.9rem;
+  color: var(--text-2);
+}
+
+/* ── 지금 상태 ─────────────────────────────────────────────────────── */
+.status {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.status > div {
+  display: grid;
+  grid-template-columns: 9rem 1fr;
+  gap: 0.3rem 1.2rem;
+  padding-block: 0.8rem;
+  border-top: 1px solid var(--line);
+}
+
+.status > div:first-child {
+  border-top: none;
+  padding-top: 0;
+}
+
+.status dt {
+  font-weight: 650;
+}
+
+.status dd {
+  margin: 0;
+  color: var(--text-2);
+  font-size: 0.92rem;
+  max-width: 62ch;
+}
+
+/* ── 닫는 CTA ──────────────────────────────────────────────────────── */
+.closing {
+  border-top: 1px solid var(--line);
+  padding-block: clamp(2.5rem, 6vw, 4rem);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.8rem;
+}
+
+.closing h2 {
+  font-size: clamp(1.3rem, 3vw, 1.8rem);
+}
+
+.closing p {
+  color: var(--muted);
+}
+
+/* ── 푸터 ──────────────────────────────────────────────────────────── */
+.foot {
+  background: var(--surface-2);
+  border-top: 1px solid var(--line);
+}
+
+.foot-in {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  padding-block: 1.6rem 2.2rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.foot p {
+  max-width: 78ch;
+}
+
+.foot strong {
+  color: var(--text-2);
+}
+
+.foot-meta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.4rem 1rem;
+  border-top: 1px solid var(--line);
+  padding-top: 0.9rem;
+  font-size: 0.8rem;
+}
+
+/* ── 좁은 화면 ─────────────────────────────────────────────────────── */
+@media (max-width: 860px) {
+  .hero {
+    grid-template-columns: 1fr;
+  }
+
+  .ledger,
+  .answers,
+  .steps {
+    grid-template-columns: 1fr;
+  }
+
+  .two-col {
+    grid-template-columns: 1fr;
+  }
+
+  .carry {
+    margin-top: 0;
+  }
+
+  .example {
+    margin-top: 0;
+  }
+}
+
+@media (max-width: 640px) {
+  /* 비율 막대가 글자보다 좁아지는 폭에서는 두 줄로 쌓는다. */
+  .split-bar {
+    flex-direction: column;
+  }
+
+  .split-kept,
+  .split-out {
+    flex: none;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 0.8rem;
+  }
+
+  .split-kept {
+    border-right: none;
+    border-bottom: 1px solid var(--accent-line);
+  }
+
+  .status > div {
+    grid-template-columns: 1fr;
+  }
+
+  .wordmark {
+    margin-right: 0;
+  }
+
+  .bar-in {
+    gap: 0.5rem 0.7rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .btn {
+    transition: none;
+  }
+}

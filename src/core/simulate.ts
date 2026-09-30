@@ -1,6 +1,7 @@
+import { assertResolved } from './choice.js';
 import { applyDiscounts } from './discount.js';
 import { calcSpending } from './spending.js';
-import { selectTier } from './tier.js';
+import { rebateFor, selectTier } from './tier.js';
 import type { CardRule, MonthResult, Transaction, TxResult, Won } from './types.js';
 
 export interface SimulateOptions {
@@ -67,6 +68,7 @@ export function simulate(
   transactions: readonly Transaction[],
   options: SimulateOptions = {},
 ): MonthResult[] {
+  assertResolved(rule);
   const months = groupByMonth(transactions);
   const results: MonthResult[] = [];
 
@@ -76,6 +78,8 @@ export function simulate(
   for (const [month, txs] of months) {
     const tier = selectTier(prevSpending ?? 0, rule.tiers);
     const discounts = applyDiscounts(rule, tier, txs);
+    // 월정액은 거래가 아니라 구간에 붙는다. 결제가 없는 달에도 구간이 열려 있으면 들어온다.
+    const rebate = rebateFor(rule, tier);
     const spending = calcSpending(rule, txs, discounts);
 
     const txResults: TxResult[] = discounts.discounts.map((d) => {
@@ -86,7 +90,11 @@ export function simulate(
         reason: d.reason,
         countedSpending: spending.byTxId[d.txId] ?? 0,
       };
-      return d.cappedBy === undefined ? base : { ...base, cappedBy: d.cappedBy };
+      return {
+        ...base,
+        ...(d.cappedBy === undefined ? {} : { cappedBy: d.cappedBy }),
+        ...(d.stacked === undefined ? {} : { stacked: d.stacked }),
+      };
     });
 
     results.push({
@@ -95,8 +103,10 @@ export function simulate(
       prevSpending,
       tierAssumed: assumed,
       transactions: txResults,
-      totalDiscount: discounts.totalDiscount,
+      totalDiscount: discounts.totalDiscount + rebate,
+      rebate,
       capUsage: discounts.capUsage,
+      groupUsage: discounts.groupUsage,
       totalCapUsed: discounts.totalCapUsed,
       countedSpending: spending.total,
     });

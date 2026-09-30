@@ -120,3 +120,80 @@ describe('requiredSpendFor — 필요 사용액 역산 (기능 2)', () => {
     expect(open.requiredTotalSpend).toBe(400_000);
   });
 });
+
+describe('requiredSpendFor — 실제 거래 표본을 늘려 쓰기', () => {
+  it('가맹점명으로 맞추는 혜택도 걸린다', () => {
+    // 업종 비중만으로는 가맹점명이 사라져 "스타벅스" 혜택이 한 건도 붙지 않았다.
+    // 표본 5,000원 건을 되풀이하면 10% 할인·한도 1만원 → 20건(10만원)이 빠져 40만원.
+    const rule = card({
+      id: 'c',
+      tiers: TIERS,
+      benefits: [
+        benefit({
+          id: 'sb',
+          match: { merchants: ['스타벅스'] },
+          discount: { type: 'rate', rate: 0.1 },
+          excludeFromSpending: 'full',
+          monthlyCapByTier: { '0': 10_000, '300000': 10_000 },
+        }),
+      ],
+    });
+    const got = requiredSpendFor(rule, TARGET, {
+      weights: { cafe: 1 },
+      samples: [{ merchant: '스타벅스 강남점', category: 'cafe', amount: 5_000 }],
+    });
+    expect(got.requiredTotalSpend).toBe(400_000);
+    expect(got.resultingSpending).toBe(300_000);
+    expect(got.excludedAmount).toBe(100_000);
+    expect(got.expectedDiscount).toBe(10_000);
+    expect(got.breakdown['cafe']).toBe(400_000);
+  });
+
+  it('해외 표시를 그대로 옮기고 표본 순서대로 되풀이한다', () => {
+    // 해외 10,000원 → 2% = 200원, 한도 2,000원이면 해외 10건(10만원)이 빠진다.
+    // 해외·마트가 번갈아 오므로 40만원이면 실적 30만원이고, 1원 모자라면 마지막 마트 건이
+    // 9,999원이 되어 실적이 299,999원이다.
+    const rule = card({
+      id: 'c',
+      tiers: TIERS,
+      benefits: [
+        benefit({
+          id: 'ov',
+          match: { overseas: true },
+          discount: { type: 'rate', rate: 0.02 },
+          excludeFromSpending: 'full',
+          monthlyCapByTier: { '0': 2_000, '300000': 2_000 },
+        }),
+      ],
+    });
+    const got = requiredSpendFor(rule, TARGET, {
+      weights: { shopping: 1, mart: 1 },
+      samples: [
+        { merchant: 'AMAZON', category: 'shopping', amount: 10_000, overseas: true },
+        { merchant: '동네마트', category: 'mart', amount: 10_000 },
+      ],
+    });
+    expect(got.requiredTotalSpend).toBe(400_000);
+    expect(got.excludedAmount).toBe(100_000);
+    expect(got.expectedDiscount).toBe(2_000);
+    expect(got.breakdown).toEqual({ shopping: 200_000, mart: 200_000 });
+  });
+
+  it('결제유형을 그대로 옮긴다', () => {
+    // 무이자할부가 실적에서 빠지는 카드. 표본의 절반이 무이자할부면 두 배를 써야 한다.
+    const rule = card({
+      id: 'c',
+      tiers: TIERS,
+      spendingExclusions: [{ kind: 'paymentType', values: ['interestFreeInstallment'] }],
+    });
+    const got = requiredSpendFor(rule, TARGET, {
+      weights: { mart: 1 },
+      samples: [
+        { merchant: '가전', category: 'mart', amount: 10_000, paymentType: 'interestFreeInstallment' },
+        { merchant: '마트', category: 'mart', amount: 10_000 },
+      ],
+    });
+    expect(got.requiredTotalSpend).toBe(600_000);
+    expect(got.excludedAmount).toBe(300_000);
+  });
+});

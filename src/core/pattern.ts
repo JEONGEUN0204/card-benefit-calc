@@ -1,4 +1,4 @@
-import type { SpendingPattern, Transaction, Won } from './types.js';
+import type { SpendingPattern, SpendingSample, Transaction, Won } from './types.js';
 
 /**
  * 사용내역에서 소비 패턴을 뽑는다 — 기능 2(필요 사용액)를 내 명세서로 돌리기 위한 입력.
@@ -6,6 +6,9 @@ import type { SpendingPattern, Transaction, Won } from './types.js';
  * 비중은 카테고리별 결제액을 그대로 쓴다. `requiredSpendFor`가 알아서 정규화하므로
  * 여기서 나눗셈을 해 소수를 만들 이유가 없다. 실적에서 빠지는 카테고리(세금·상품권)도
  * 남긴다 — 그걸 빼면 "그만큼 더 써야 한다"는 사실이 답에서 사라진다.
+ *
+ * 거래 자체도 `samples`로 남긴다. 혜택이 가맹점명·해외 여부로 붙으면 업종 합계만으로는
+ * 할인이 걸리지 않아, 할인받아 빠지는 몫이 늘 0원으로 나온다.
  */
 export function patternFromTransactions(transactions: readonly Transaction[]): SpendingPattern {
   const sums: Record<string, Won> = {};
@@ -32,5 +35,14 @@ export function patternFromTransactions(transactions: readonly Transaction[]): S
     weights: sums,
     ticketSize,
     defaultTicket: average(total, transactions.length),
+    samples: transactions.map(toSample),
   };
+}
+
+/** 혜택 매칭에 쓰이는 필드만 남긴다. 표시가 없는 필드는 적지 않는다. */
+function toSample(tx: Transaction): SpendingSample {
+  const sample: SpendingSample = { merchant: tx.merchant, category: tx.category, amount: tx.amount };
+  if (tx.overseas !== undefined) sample.overseas = tx.overseas;
+  if (tx.paymentType !== undefined) sample.paymentType = tx.paymentType;
+  return sample;
 }

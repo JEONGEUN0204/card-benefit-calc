@@ -5,12 +5,18 @@
  * 사람이 봐야 알 수 있어서, 월별 흐름을 표로 펼쳐 보여준다.
  *
  *   npm run sim -- fixtures/cases/07-three-month.json
- *   npm run sim -- --max fixtures/cards/complex-integrated.json
- *   npm run sim -- --required fixtures/cards/simple-cafe.json --tier 300000
+ *   npm run sim -- --max fixtures/cards/toss-samsung.json
+ *   npm run sim -- --required fixtures/testcards/simple-cafe.json --tier 300000
+ *   npm run sim -- --max fixtures/cards/kb-need-pay.json --choice pay=naver
+ *
+ * 택1 선택지가 있는 카드는 `--choice 그룹=선택지`로 고른다. `--max`에서 고르지 않으면 선택지마다
+ * 한 번씩 펼치고, 나머지 모드에서는 첫 선택지를 쓴다. 골든 케이스는 `choices` 필드로 고른다.
  */
 import { readFileSync, readdirSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { resolveChoices } from '../src/core/choice.js';
+import type { ChoiceSelection } from '../src/core/choice.js';
 import { maxDiscountByTier } from '../src/core/maxDiscount.js';
 import { requiredSpendFor } from '../src/core/requiredSpend.js';
 import { simulate } from '../src/core/simulate.js';
@@ -23,6 +29,7 @@ const REASON_LABEL: Record<DiscountReason, string> = {
   noMatch: '해당 혜택 없음',
   belowMin: '건당 최소금액 미달',
   benefitCapReached: '혜택 월 한도 소진',
+  groupCapReached: '묶인 혜택의 공동 한도 소진',
   totalCapReached: '통합 한도 소진',
   countLimit: '횟수 제한 초과',
   roundedToZero: '절사되어 0원',
@@ -31,6 +38,7 @@ const REASON_LABEL: Record<DiscountReason, string> = {
 
 const CAPPED_LABEL: Record<string, string> = {
   benefit: '혜택 한도',
+  group: '공동 한도',
   total: '통합 한도',
   perTransaction: '건당 한도',
 };
@@ -43,13 +51,16 @@ function readJson<T>(path: string): T {
   return JSON.parse(readFileSync(resolve(path), 'utf8')) as T;
 }
 
+/** 화면에 실리는 카드와 골든 전용 가상 카드를 함께 뒤진다. 골든 케이스는 둘 다 쓴다. */
 function loadCardById(id: string): CardRule {
-  const dir = join(ROOT, 'fixtures', 'cards');
-  for (const file of readdirSync(dir).filter((f) => f.endsWith('.json'))) {
-    const rule = readJson<CardRule>(join(dir, file));
-    if (rule.id === id) return rule;
+  const dirs = [join(ROOT, 'fixtures', 'cards'), join(ROOT, 'fixtures', 'testcards')];
+  for (const dir of dirs) {
+    for (const file of readdirSync(dir).filter((f) => f.endsWith('.json'))) {
+      const rule = readJson<CardRule>(join(dir, file));
+      if (rule.id === id) return rule;
+    }
   }
-  throw new Error(`fixtures/cards 에서 카드를 찾지 못했다: ${id}`);
+  throw new Error(`fixtures/cards·testcards 에서 카드를 찾지 못했다: ${id}`);
 }
 
 function printSimulation(card: CardRule, transactions: Transaction[], initialPrevSpending?: Won): void {
@@ -68,13 +79,15 @@ function printSimulation(card: CardRule, transactions: Transaction[], initialPre
     for (const t of m.transactions) {
       const tx = transactions.find((x) => x.id === t.txId);
       const capped = t.cappedBy === undefined ? '' : ` (${CAPPED_LABEL[t.cappedBy]}에 잘림)`;
-      const detail = t.discount > 0 ? `${won(t.discount)} 할인${capped}` : REASON_LABEL[t.reason];
+      const stacked = (t.stacked ?? []).map((s) => ` (중복 ${s.benefitId} ${won(s.discount)} 포함)`).join('');
+      const detail = t.discount > 0 ? `${won(t.discount)} 할인${capped}${stacked}` : REASON_LABEL[t.reason];
       console.log(
         `  ${pad(t.txId, 12)} ${pad(tx?.merchant ?? '', 16)} ${pad(won(tx?.amount ?? 0), 12)}` +
           ` → ${pad(detail, 28)} 실적 ${won(t.countedSpending)}`,
       );
     }
 
+    if (m.rebate > 0) console.log(`  ─ 월정액 할인 ${won(m.rebate)} (구간에 붙는 몫)`);
     console.log(`  ─ 할인 합계 ${won(m.totalDiscount)} / 이 달 실적 ${won(m.countedSpending)}`);
     if (Object.keys(m.capUsage).length > 0) {
       const usage = Object.entries(m.capUsage).map(([id, v]) => `${id} ${won(v)}`).join(', ');
@@ -88,14 +101,34 @@ function printSimulation(card: CardRule, transactions: Transaction[], initialPre
 
 function printMaxDiscount(card: CardRule): void {
   console.log(`\n=== ${card.name} — 구간별 월 최대 할인 ===\n`);
+  const groupOf = new Map(
+    card.benefits.filter((b) => b.capGroup !== undefined).map((b) => [b.id, b.capGroup as string]),
+  );
+
   for (const row of maxDiscountByTier(card)) {
     const label = row.tier.label ?? `${won(row.tier.min)} 이상`;
-    const note = row.cappedByTotal
-      ? ` ← 혜택 한도 합 ${won(row.sumOfBenefitCaps)}이지만 통합 한도에 잘림`
-      : '';
-    console.log(`  ${pad(label, 14)} 최대 ${pad(won(row.maxDiscount), 12)}${note}`);
+    // 혜택 한도의 단순 합과 실제 상한이 왜 다른지 한 줄로 밝힌다. 이 줄이 없으면 아래
+    // 혜택별 숫자를 더한 값과 맞지 않아 표가 틀린 것처럼 보인다.
+    const cut: string[] = [];
+    if (row.cappedByGroup) cut.push('공동 한도');
+    if (row.cappedByTotal) cut.push('통합 한도');
+    const note =
+      cut.length === 0
+        ? ''
+        : ` ← 혜택 한도 합 ${won(row.sumOfBenefitCaps)}이지만 ${cut.join('·')}에 잘림`;
+    // 한도 없는 혜택이 있으면 최대치는 그 혜택을 뺀 몫이다. 뒤에 붙여 끝이 열려 있다고 밝힌다.
+    const open = row.unboundedBenefits.length === 0 ? '' : ` + 한도 없음(${row.unboundedBenefits.join(', ')})`;
+    console.log(`  ${pad(label, 14)} 최대 ${pad(won(row.maxDiscount), 12)}${open}${note}`);
+
     for (const [id, cap] of Object.entries(row.byBenefit)) {
-      if (cap > 0) console.log(`      · ${pad(id, 14)} ${won(cap)}`);
+      const group = groupOf.get(id);
+      const tag = group === undefined ? '' : `  (${group} 공동)`;
+      if (cap === null) console.log(`      · ${pad(id, 20)} ${pad('한도 없음', 10)}${tag}`);
+      else if (cap > 0) console.log(`      · ${pad(id, 20)} ${pad(won(cap), 10)}${tag}`);
+    }
+    if (row.rebate > 0) console.log(`      + ${pad('월정액 할인', 20)} ${won(row.rebate)}`);
+    for (const [id, cap] of Object.entries(row.byGroup)) {
+      if (cap > 0) console.log(`      = ${pad(`${id} 공동 한도`, 20)} ${won(cap)}`);
     }
   }
 }
@@ -127,9 +160,36 @@ function printRequiredSpend(card: CardRule, targetMin: Won): void {
   }
 }
 
+/** `--choice pay=naver`를 여러 번 받을 수 있다. */
+function choiceArgs(args: readonly string[]): ChoiceSelection {
+  const selection: ChoiceSelection = {};
+  args.forEach((arg, i) => {
+    if (arg !== '--choice') return;
+    const [group, option] = (args[i + 1] ?? '').split('=');
+    if (group !== undefined && option !== undefined) selection[group] = option;
+  });
+  return selection;
+}
+
+/** 고르지 않은 그룹마다 선택지를 하나씩 펼친 조합. 선택지가 없는 카드는 규칙 하나다. */
+function expand(card: CardRule, fixed: ChoiceSelection): { label: string; rule: CardRule }[] {
+  let combos: ChoiceSelection[] = [{ ...fixed }];
+  for (const group of card.choices ?? []) {
+    if (fixed[group.id] !== undefined) continue;
+    combos = combos.flatMap((c) => group.options.map((o) => ({ ...c, [group.id]: o.id })));
+  }
+  return combos.map((selection) => ({
+    label: Object.entries(selection).map(([g, o]) => `${g}=${o}`).join(', '),
+    rule: resolveChoices(card, selection),
+  }));
+}
+
 function main(): void {
   const args = process.argv.slice(2);
-  const target = args.find((a) => !a.startsWith('--') && args[args.indexOf(a) - 1] !== '--tier');
+  const target = args.find(
+    (a) => !a.startsWith('--') && !['--tier', '--choice'].includes(args[args.indexOf(a) - 1] ?? ''),
+  );
+  const selection = choiceArgs(args);
 
   if (target === undefined) {
     console.error('사용법: npm run sim -- <case.json | --max card.json | --required card.json --tier N>');
@@ -137,13 +197,17 @@ function main(): void {
   }
 
   if (args.includes('--max')) {
-    printMaxDiscount(readJson<CardRule>(target));
+    for (const { label, rule } of expand(readJson<CardRule>(target), selection)) {
+      if (label !== '') console.log(`
+--- 선택: ${label}`);
+      printMaxDiscount(rule);
+    }
     return;
   }
 
   if (args.includes('--required')) {
     const tierArg = args[args.indexOf('--tier') + 1];
-    printRequiredSpend(readJson<CardRule>(target), Number(tierArg ?? 0));
+    printRequiredSpend(resolveChoices(readJson<CardRule>(target), selection), Number(tierArg ?? 0));
     return;
   }
 
@@ -151,8 +215,10 @@ function main(): void {
     card: string;
     transactions: Transaction[];
     initialPrevSpending?: Won;
+    choices?: ChoiceSelection;
   }>(target);
-  printSimulation(loadCardById(testCase.card), testCase.transactions, testCase.initialPrevSpending);
+  const card = resolveChoices(loadCardById(testCase.card), { ...testCase.choices, ...selection });
+  printSimulation(card, testCase.transactions, testCase.initialPrevSpending);
 }
 
 main();

@@ -1,110 +1,1066 @@
-/* 웹폰트를 쓰지 않는다 — CSP가 외부 요청을 막고, 시스템 한글 글꼴로 충분하다. */
-:root {
-  --bg: #f6f5f2;
-  --surface: #ffffff;
-  --text: #1c1b19;
-  --muted: #6b675f;
-  --line: #e3e0d9;
-  --accent: #1f5f4a;
-  --accent-soft: #e3f0ea;
-  --warn: #8a4b00;
-  --warn-soft: #fbefdc;
-  --error: #a3261b;
-  --error-soft: #fbe5e2;
-  --radius: 10px;
-  color-scheme: light;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #151514;
-    --surface: #1f1e1c;
-    --text: #ecebe7;
-    --muted: #a19d94;
-    --line: #34322e;
-    --accent: #7cc4a6;
-    --accent-soft: #1d3029;
-    --warn: #f0b765;
-    --warn-soft: #34291a;
-    --error: #f08a7e;
-    --error-soft: #3a1f1c;
-    color-scheme: dark;
-  }
-}
+/*
+ * 앱 화면 스타일.
+ *
+ * 색·간격·모서리 값과 글꼴은 tokens.css에 있다. 폰트 파일도 저장소에 넣어 함께 실어
+ * 나른다 — 빌드 CSP(`font-src 'self'`)가 외부 폰트 요청을 막는다.
+ */
+@import './tokens.css';
 
 * {
   box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  /*
+   * 탭했을 때 브라우저가 칠하는 회색 판을 끈다. 대신 조작하는 것마다 :active를 준다 —
+   * 이걸 끄고 :active를 안 주면 터치에서 누른 티가 아예 사라진다.
+   */
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  font-family: system-ui, -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', 'Noto Sans KR', sans-serif;
+  font-family: var(--font-sans);
   font-size: 15px;
   line-height: 1.6;
   word-break: keep-all;
+  overflow-wrap: break-word;
 }
 
-.page {
-  max-width: 980px;
-  margin: 0 auto;
-  padding: 32px 16px 80px;
-  display: grid;
-  gap: 20px;
+h1,
+h2,
+h3 {
+  margin: 0;
+  letter-spacing: -0.02em;
+  line-height: 1.3;
+  text-wrap: balance;
 }
 
 h1 {
-  font-size: 1.75rem;
-  margin: 0;
-  letter-spacing: -0.02em;
+  font-size: 1.5rem;
 }
 
 h2 {
-  font-size: 1.15rem;
-  margin: 0;
+  font-size: 1.1rem;
 }
 
 h3 {
-  font-size: 0.95rem;
-  margin: 20px 0 8px;
+  font-size: 0.9rem;
   color: var(--muted);
+  font-weight: 600;
 }
 
-.masthead {
+p {
+  margin: 0;
+}
+
+/*
+ * 본문으로 건너뛰기. 평소에는 화면 밖에 있다가 탭으로 초점이 오면 나온다.
+ * 랜딩(landing.css)과 같은 모양이다.
+ */
+.skip {
+  position: absolute;
+  left: -9999px;
+}
+
+.skip:focus {
+  left: 20px;
+  top: 12px;
+  z-index: 10;
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-sm);
+  padding: 0.5rem 0.8rem;
+}
+
+/*
+ * 자바스크립트가 꺼졌을 때만 보이는 안내. 전에는 인라인 style 속성으로 꾸몄는데
+ * 빌드 CSP(style-src 'self')가 막아 실제로는 적용되지 않았다.
+ */
+.noscript {
+  max-width: 40em;
+  margin: 3em auto;
+  padding: 0 1em;
+}
+
+/* ── 앱 셸 ─────────────────────────────────────────────────────────── */
+.app {
+  /* 100vh는 주소창이 접힌 높이라 폰에서 그만큼 넘친다. dvh는 보이는 만큼을 따라온다. */
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+.wrap {
+  width: 100%;
+  max-width: 1040px;
+  margin: 0 auto;
+  /* 가로 모드에서 노치 쪽으로 글자가 물리지 않게 안전 영역을 더한다. */
+  padding-left: calc(16px + env(safe-area-inset-left, 0px));
+  padding-right: calc(16px + env(safe-area-inset-right, 0px));
+}
+
+.appbar {
+  border-bottom: 1px solid var(--line);
+  background: var(--bar);
+  backdrop-filter: saturate(1.4) blur(10px);
+  /* 노치·다이내믹 아일랜드 아래로 글자가 들어가지 않게 비켜 준다. */
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+.appbar-inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 16px;
+  min-height: 60px;
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+.wordmark {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-right: auto;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.wordmark svg {
+  display: block;
+  color: var(--mark);
+}
+
+/* 대문자 배지 대신 한글 한 단어. 이름 옆에 낮게 붙는 설명이다. */
+.wordmark .beta {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+.card-picker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.privacy-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: 1px solid var(--accent-line);
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.main {
+  flex: 1;
+  padding-bottom: 56px;
+}
+
+/* 단계 제목 밑의 한 줄. 이 단계에서 무엇을 하면 되는지를 말한다. */
+.lede {
+  max-width: 56ch;
+  color: var(--text-2);
+  font-size: 0.98rem;
+}
+
+/* ── 순액 원장 (할인 결과 첫머리) ───────────────────────────────────── */
+/*
+ * 화면에서 힘을 싣는 곳은 여기 한 군데다. 안내문 금액에서 빠지는 몫을 한 줄씩 빼고, 순할인을
+ * 맨 아래에 가장 크게 적는다. 박스·그림자 없이 통장처럼 괘선과 오른쪽 정렬 금액으로만 선다.
+ */
+.net {
   display: grid;
+  grid-template-columns: minmax(0, 36rem) minmax(0, 1fr);
+  gap: 20px 48px;
+  align-items: start;
+  padding-bottom: 28px;
+  border-bottom: 1px solid var(--line-strong);
+}
+
+.net-for {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
   gap: 12px;
 }
 
-.lede {
-  margin: 4px 0 0;
-  color: var(--muted);
+.net-for p {
+  display: grid;
+  line-height: 1.35;
 }
 
-.privacy {
+.net-for .muted {
+  font-size: 0.85rem;
+}
+
+.net dl,
+.net-ledger,
+.net-ledger dd {
   margin: 0;
-  padding: 10px 14px;
-  border-radius: var(--radius);
+}
+
+.net-ledger {
+  max-width: 36rem;
+}
+
+.net-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: baseline;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.net-row dt {
+  color: var(--text-2);
+}
+
+.net-row dt small {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.net-row dd {
+  font-size: 1.1rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* 명목 금액. 받을 수 없던 만큼이 있으면 줄을 긋는다. */
+.net-row dd.nominal {
+  color: var(--muted);
+  text-decoration: line-through;
+  text-decoration-thickness: 1.5px;
+}
+
+.net-row.loss dd {
+  color: var(--seal);
+}
+
+.net-row.zero dd {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+/* 통장의 합계 줄처럼 굵은 괘선 위에 선다. */
+.net-row.result {
+  align-items: last baseline;
+  margin-top: -1px;
+  padding-top: 14px;
+  border-top: 2px solid var(--text);
+  border-bottom: none;
+}
+
+.net-row.result dt {
+  color: var(--text);
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.net-row.result dd {
+  color: var(--accent);
+  font-size: clamp(2.4rem, 7vw, 3.4rem);
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  line-height: 1;
+}
+
+/* 써야 하는 돈. 초록은 순할인에만 쓰므로 잉크색으로 둔다. */
+.net-row.result.spend dd {
+  color: var(--text);
+}
+
+.net-facts {
+  display: grid;
+  gap: 14px;
+  margin-top: 10px;
+  padding-left: 20px;
+  border-left: 1px solid var(--line);
+}
+
+.net-facts dt {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.net-facts dd {
+  font-size: 1.05rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.net-facts dd.loss {
+  color: var(--seal);
+}
+
+/* ── 미터 (한도 대비) ──────────────────────────────────────────────── */
+.meter {
+  display: grid;
+  gap: 5px;
+  margin-top: 6px;
+}
+
+.meter-track {
+  height: 8px;
+  border-radius: 0 4px 4px 0;
+  background: var(--mark-track);
+  overflow: hidden;
+}
+
+.meter-fill {
+  height: 100%;
+  /* 기준선(왼쪽)은 각지게, 데이터 끝만 둥글게. */
+  border-radius: 0 4px 4px 0;
+  background: var(--mark);
+}
+
+.meter-caption {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.meter-inline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 128px;
+  margin: 0;
+}
+
+.meter-inline .meter-track {
+  flex: 1;
+  min-width: 52px;
+}
+
+.meter-inline .meter-pct {
+  width: 3.4em;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+/* ── 단계 ──────────────────────────────────────────────────────────── */
+/*
+ * 화면에는 한 번에 한 단계만 선다. 단계 이름을 모두 늘어놓으면 지금 할 일이 이름들 사이에
+ * 묻히기 때문에, 위에는 점만 남기고 이름은 본문 제목으로 한 번만 크게 적는다.
+ */
+.stepbar {
+  position: sticky;
+  top: 0;
+  /* 아래 scroll-margin-top이 이 높이를 비켜 준다. 같이 고친다. */
+  z-index: 5;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg);
+}
+
+.stepbar .wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-top: 11px;
+  padding-bottom: 11px;
+}
+
+.step-count {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.step-dots {
+  display: flex;
+  gap: 7px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.step-dots button {
+  display: block;
+  width: 9px;
+  height: 9px;
+  padding: 0;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--surface);
+  transition: width 0.15s, background 0.12s, border-color 0.12s;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .step-dots button:hover:not(:disabled) {
+    border-color: var(--muted);
+    background: var(--surface-2);
+  }
+}
+
+.step-dots button.done {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+/* 지금 단계는 점 하나만 길게 늘인다. 색을 못 보는 눈에도 자리가 보여야 한다. */
+.step-dots button.on {
+  width: 26px;
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+.steppanel {
+  display: grid;
+  gap: 18px;
+  padding-top: 22px;
+  padding-bottom: 8px;
+}
+
+.step-head {
+  display: grid;
+  gap: 6px;
+}
+
+.step-head h1 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: clamp(1.4rem, 3.6vw, 1.75rem);
+}
+
+.step-head .count {
+  padding: 0 7px;
+  border-radius: 999px;
+  background: var(--surface-sunken);
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.step-head .count.alert {
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+
+.stepbody {
+  display: grid;
+  gap: 16px;
+}
+
+.step-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 6px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+
+/* 다음으로 가는 버튼은 늘 오른쪽 끝이다. 앞 단계가 없는 첫 단계에서도 자리가 안 움직인다. */
+.step-nav button {
+  padding: 9px 16px;
+}
+
+.step-nav button.primary {
+  margin-left: auto;
+}
+
+/* ── 카드 플레이트 ─────────────────────────────────────────────────── */
+/* 번들된 카드 이미지가 있을 때만 선다. 비율은 실제 카드와 같은 85.6 × 53.98 mm다. */
+.plate {
+  flex: none;
+  width: 72px;
+  aspect-ratio: 1.586;
+  overflow: hidden;
+  border-radius: 5px;
+  box-shadow: var(--shadow-sm);
+}
+
+.plate img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* ── 카드 고르기 ───────────────────────────────────────────────────── */
+/*
+ * 1단계의 주역.
+ *
+ * 이 단계에서 실제로 하는 일은 카드 한 장 고르기 하나다. 그래서 고르는 칸만 흰 표면 위에
+ * 올리고, 그 아래 구간별 월 최대·혜택별 한도는 페이지 배경 위 괘선으로 둔다. "상자는 손으로
+ * 다루는 것에만"이라는 선이 여기서는 위계도 함께 만든다 — 이 화면에 상자가 하나뿐이라 눈이
+ * 먼저 그리로 간다.
+ *
+ * 크기로 겨루지는 않는다. 카드 이름은 단계 제목(h1)보다 작고 구간별 월 최대 숫자보다 크다.
+ * 전에는 그 숫자가 카드 이름보다 커서, 고르는 칸이 표의 머리글처럼 읽혔다.
+ */
+/*
+ * 폭도 주역이 쓴다. 아래 한도표가 본문 폭을 다 쓰는데 고르는 칸만 절반이면, 크기로는
+ * 표가 더 커 보여 위계가 다시 뒤집힌다. 다만 끝까지 늘리지는 않는다 — 카드 이름과 오른쪽
+ * "바꾸기" 사이가 한 줄로 이어 읽히지 않을 만큼 멀어진다.
+ */
+.chooser {
+  position: relative;
+  max-width: 48rem;
+}
+
+/* 고르는 칸과 아래 설명 사이. */
+.chooser + .panel,
+.choice + .panel {
+  margin-top: 40px;
+}
+
+/*
+ * 택1 선택지. 고르는 칸 바로 아래에 붙어 한 묶음으로 읽힌다. 폭도 고르는 칸을 따른다.
+ * 알약 모양 라디오라 누를 자리가 넓고, 고른 것은 강조색 면으로 드러난다.
+ */
+.choice {
+  max-width: 48rem;
+  margin-top: 16px;
+}
+
+.choice fieldset {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.choice legend {
+  margin-bottom: 8px;
+  padding: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.choice legend .muted {
+  margin-left: 4px;
+  font-weight: 400;
+}
+
+.choice-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.choice-options label {
+  position: relative;
+  touch-action: manipulation;
+}
+
+/* 원래 라디오는 보조기술과 키보드를 위해 남기고 눈에서만 감춘다. */
+.choice-options input {
+  position: absolute;
+  opacity: 0;
+  inset: 0;
+  margin: 0;
+  cursor: pointer;
+}
+
+.choice-options span {
+  display: inline-block;
+  min-height: 40px;
+  padding: 9px 16px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text-2);
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.choice-options input:checked + span {
+  border-color: var(--accent);
   background: var(--accent-soft);
   color: var(--accent);
-  font-size: 0.9rem;
 }
 
-.panel {
+.choice-options input:focus-visible + span {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .choice-options input:not(:checked):hover + span {
+    border-color: var(--accent-line);
+  }
+}
+
+.choice-options input:active + span {
+  transform: scale(0.98);
+}
+
+.chooser-current {
+  display: grid;
+  gap: 14px;
+  width: 100%;
+  padding: 26px 24px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-lg);
   background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  padding: 20px;
+  /*
+   * 배경(--bg)과 흰 표면은 대비가 몇 %뿐이라 면만으로는 갈리지 않는다. 이 칸이 떠 있다는
+   * 신호는 사실상 그림자가 낸다 — 그래서 여기만 shadow-md를 쓴다.
+   */
+  box-shadow: var(--shadow-md);
+  text-align: left;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .chooser-current:hover:not(:disabled) {
+    border-color: var(--accent);
+    background: var(--surface);
+  }
+}
+
+/*
+ * 누른 티. 전역 버튼은 0.98까지 줄지만 이 칸은 화면에서 가장 넓어 같은 값이면 판이 출렁인다.
+ * 배경도 꺼뜨리지 않는다 — 넓은 면이 어두워지면 눌렀다기보다 꺼진 것으로 읽힌다.
+ */
+.chooser-current:active:not(:disabled) {
+  transform: scale(0.995);
+  border-color: var(--accent);
+  background: var(--surface);
+}
+
+.chooser-current[aria-expanded="true"] {
+  border-color: var(--accent);
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+  box-shadow: none;
+}
+
+/* 카드 그림은 무대에서 조금 크게 선다. 번들된 이미지가 있을 때만 그려진다. */
+.chooser-current .plate {
+  width: 88px;
+}
+
+/* 칸 안은 세 층이다 — 이름, 혜택 배지, 이 카드의 최대치. */
+.chooser-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.chooser-id {
+  display: grid;
+  flex: 1;
   min-width: 0;
+  line-height: 1.25;
+}
+
+/*
+ * 혜택 배지. 규칙에 적힌 혜택을 그대로 세워, 칸만 보고도 무슨 카드인지 알 수 있게 한다.
+ * 문구는 labels.ts의 benefitTag가 만든다.
+ */
+.chooser-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chooser-tags span {
+  padding: 4px 10px;
+  border: 1px solid var(--accent-line);
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* 이 카드의 최대치. 아래 한도표 마지막 칸과 같은 값이라 눈이 그리로 이어진다. */
+.chooser-max {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-weight: 400;
+}
+
+.chooser-max strong {
+  color: var(--text);
+  font-size: 1.35rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.chooser-name {
+  font-size: clamp(1.35rem, 3.8vw, 1.6rem);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+}
+
+.chooser-meta {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 400;
+}
+
+.chooser-change {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  /* 칸이 여러 층이라도 이름 줄 옆에 선다. */
+  padding-top: 3px;
+  color: var(--accent);
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+/* 열리면 갈매기가 뒤집힌다. 열림·닫힘이 같은 자리에서 일어나는 일이라 글자만으로는 약하다. */
+.chooser-change svg {
+  transition: transform 0.16s ease-out;
+}
+
+.chooser-current[aria-expanded="true"] .chooser-change svg {
+  transform: rotate(180deg);
+}
+
+.chooser-pop {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  display: grid;
+  gap: 6px;
+  margin-top: -1px;
+  padding: 10px;
+  border: 1px solid var(--accent);
+  border-top-color: var(--line);
+  border-radius: 0 0 var(--r-lg) var(--r-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-md);
+  /*
+   * 목록은 누른 칸 바로 아래에 붙으므로 위에서 미끄러져 내려온다. 160ms ease-out — 누른
+   * 순간 곧바로 움직여야 빠르게 읽힌다(ease-in은 같은 시간이어도 굼떠 보인다). 모션을 줄이는
+   * 설정에서는 파일 끝 규칙이 지속시간을 0으로 만든다.
+   */
+  transition: opacity 0.16s ease-out, transform 0.16s ease-out;
+}
+
+@starting-style {
+  .chooser-pop {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+.chooser-pop input[type="search"] {
+  width: 100%;
+  padding: 9px 12px;
+}
+
+.chooser-list {
+  max-height: min(20rem, 50vh);
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.chooser-list ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chooser-issuer {
+  padding: 8px 10px 4px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.chooser-list [role="option"] {
+  padding: 9px 10px;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+}
+
+.chooser-list [role="option"].active {
+  background: var(--surface-sunken);
+}
+
+/* 고른 카드는 색이 아니라 굵기와 표시로도 구분된다. */
+.chooser-list [role="option"][aria-selected="true"] {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.chooser-list [role="option"][aria-selected="true"]::after {
+  content: " (지금 카드)";
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.chooser-empty {
+  padding: 8px 10px;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+/* ── 구간별 월 최대 ────────────────────────────────────────────────── */
+/*
+ * 고른 카드에 대한 답. 구간마다 한 달 최대 할인을 한 줄에 세운다. 공동·통합 한도에 잘린
+ * 구간은 혜택 한도를 더한 값에 줄을 긋는다 — 할인 결과의 순액 원장과 같은 표기다.
+ *
+ * 숫자 크기는 고르는 칸의 카드 이름 아래다. 이 단계의 주역은 카드 선택이고 이 표는 고른
+ * 결과라서, 숫자가 이름을 넘으면 읽는 차례가 뒤집힌다.
+ */
+/*
+ * 칸 사이 선은 테두리가 아니라 1px 간격으로 낸다. 배경색이 그 틈으로 비쳐 격자가 된다.
+ * 테두리로 그으면 칸이 줄바꿈될 때(좁은 화면에서 4칸이 2칸씩 두 줄로 접힌다) 둘째 줄 첫
+ * 칸에 선이 남아 격자가 어긋난다. 간격 방식은 몇 열로 접히든 언제나 맞는다.
+ */
+.tier-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
+  gap: 1px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-lg);
+  background: var(--line);
+  overflow: hidden;
+}
+
+.tier-strip li {
+  display: grid;
+  align-content: start;
+  gap: 2px;
+  padding: 16px;
+  background: var(--surface);
+}
+
+.tier-name {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.tier-max {
+  font-size: clamp(1.15rem, 2.8vw, 1.3rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.tier-max.zero {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.tier-nominal {
+  color: var(--muted);
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+.tier-nominal s {
+  text-decoration-thickness: 1.5px;
+}
+
+/* 혜택 이름 아래 한 줄. 공동 한도와 실적 제외 방식은 열로 세우면 같은 말이 반복된다. */
+.benefit-meta {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 400;
+}
+
+/* ── 패널 ──────────────────────────────────────────────────────────── */
+/*
+ * 패널은 상자가 아니라 괘선 한 줄로 나뉜다. 모든 것을 같은 둥근 카드에 담으면 무엇이 중요한지
+ * 구분이 사라진다. 상자는 손으로 다루는 것(드롭존·파일·알림)과, 1단계의 한도표에만 남긴다.
+ *
+ * 1단계가 예외인 이유는 그 화면의 주역인 고르는 칸이 상자이기 때문이다. 옆의 표만 배경 위에
+ * 떠 있으면 한 화면에 두 가지 문법이 섞여 보인다. 다른 단계의 표는 괘선 그대로다.
+ */
+.panel {
+  min-width: 0;
+  padding-top: 18px;
+  border-top: 1px solid var(--line-strong);
+}
+
+.stepbody > .panel:first-child,
+.net + .panel {
+  padding-top: 0;
+  border-top: none;
+}
+
+.panel > * + * {
+  margin-top: 14px;
 }
 
 .panel-head {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
+  align-items: baseline;
   justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 12px;
+  gap: 8px 16px;
+}
+
+.panel-desc {
+  max-width: 68ch;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.panel-head + .panel-desc {
+  margin-top: 6px;
+}
+
+.panel h3 {
+  margin-top: 20px;
+}
+
+.section-note {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+/* ── 표 ────────────────────────────────────────────────────────────── */
+/* 표도 상자 없이 괘선으로 선다. 첫 칸·끝 칸의 안쪽 여백을 빼 제목과 같은 선에 맞춘다. */
+.table-scroll {
+  overflow-x: auto;
+  border-top: 1px solid var(--line-strong);
+  -webkit-overflow-scrolling: touch;
+}
+
+.table-scroll th:first-child,
+.table-scroll td:first-child {
+  padding-left: 0;
+}
+
+.table-scroll th:last-child,
+.table-scroll td:last-child {
+  padding-right: 0;
+}
+
+/*
+ * 1단계의 혜택별 한도표만 박스에 담는다. 고르는 칸이 상자로 서 있는데 표만 배경 위에
+ * 떠 있으면 한 화면에 두 가지 문법이 섞인다. 다른 단계의 표는 괘선 그대로다.
+ */
+.table-scroll.boxed {
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+}
+
+.table-scroll.boxed th:first-child,
+.table-scroll.boxed td:first-child {
+  padding-left: 14px;
+}
+
+.table-scroll.boxed th:last-child,
+.table-scroll.boxed td:last-child {
+  padding-right: 14px;
+}
+
+.table-scroll.boxed thead th {
+  background: var(--surface);
+}
+
+.table-scroll.boxed tfoot th,
+.table-scroll.boxed tfoot td {
+  border-top: 1px solid var(--line-strong);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+}
+
+th,
+td {
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+
+thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  border-bottom-color: var(--line-strong);
+  background: var(--bg);
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+tbody th {
+  font-weight: 600;
+}
+
+tbody tr:last-child > * {
+  border-bottom: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  tbody tr:hover {
+    background: var(--surface-2);
+  }
+}
+
+tfoot th,
+tfoot td {
+  border-bottom: none;
+}
+
+/* 합계 줄은 통장처럼 굵은 괘선 위에 선다. 순액 원장의 합계 줄과 같은 선이다. */
+tr.total > * {
+  border-top: 2px solid var(--text);
+  font-weight: 700;
+}
+
+table.compact {
+  font-size: 0.85rem;
+}
+
+table.compact th,
+table.compact td {
+  padding: 6px 10px;
 }
 
 .num {
@@ -113,141 +1069,122 @@ h3 {
   white-space: nowrap;
 }
 
+td.discount {
+  color: var(--mark);
+  font-weight: 700;
+}
+
+td.attention,
+tr.attention > td {
+  color: var(--warn);
+}
+
+/* 실적에서 빠진 금액. 경고가 아니라 명목에서 빼는 값이라 인주색이다. */
+td.excluded {
+  color: var(--seal);
+}
+
 .muted {
   color: var(--muted);
 }
 
-.hint,
-.note {
-  font-size: 0.85rem;
-  color: var(--muted);
-  margin: 10px 0 0;
-}
-
-.ok {
-  color: var(--accent);
-}
-
-.error {
-  color: var(--error);
-  background: var(--error-soft);
-  padding: 8px 12px;
-  border-radius: 8px;
-}
-
-.warning-inline,
-details.warning {
-  color: var(--warn);
-  background: var(--warn-soft);
-  padding: 8px 12px;
-  border-radius: 8px;
-}
-
-.flag {
-  display: inline-block;
-  margin-left: 6px;
-  padding: 0 6px;
-  border-radius: 4px;
-  background: var(--warn-soft);
-  color: var(--warn);
-  font-size: 0.78rem;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
+/* ── 배지 / 알림 ───────────────────────────────────────────────────── */
+.flag,
 .tag {
   display: inline-block;
   margin-left: 6px;
-  padding: 0 6px;
-  border: 1px solid var(--line);
-  border-radius: 4px;
-  color: var(--muted);
+  padding: 0 7px;
+  border-radius: 999px;
   font-size: 0.75rem;
-  font-weight: 400;
-}
-
-.headline {
-  font-size: 1.1rem;
-}
-
-.headline strong {
-  font-size: 1.35rem;
-  color: var(--accent);
-}
-
-/* 표 */
-.table-scroll {
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-th,
-td {
-  padding: 8px 10px;
-  border-bottom: 1px solid var(--line);
-  text-align: left;
-  vertical-align: top;
-}
-
-thead th {
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--muted);
+  font-weight: 700;
   white-space: nowrap;
 }
 
-tbody th {
-  font-weight: 500;
-}
-
-tfoot th,
-tfoot td {
-  border-bottom: none;
-}
-
-tr.total th,
-tr.total td {
-  border-top: 2px solid var(--text);
-}
-
-tr.total .flag {
-  display: block;
-  margin: 4px 0 0;
-  white-space: normal;
-}
-
-table.compact th,
-table.compact td {
-  padding: 4px 8px;
-  font-size: 0.85rem;
-}
-
-tr.discounted td:nth-child(5) {
-  color: var(--accent);
-  font-weight: 600;
-}
-
-td.attention,
-tr.attention td {
+.flag {
+  border: 1px solid var(--warn-line);
+  background: var(--warn-soft);
   color: var(--warn);
 }
 
-/* 사실 나열 */
-.facts {
+.tag {
+  border: 1px solid var(--line);
+  background: var(--surface-sunken);
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.callout {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px 32px;
+  gap: 10px;
+  padding: 11px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+  font-size: 0.9rem;
+}
+
+.callout svg {
+  flex: none;
+  margin-top: 3px;
+}
+
+.callout .grow {
+  flex: 1;
+  min-width: 0;
+}
+
+.callout.info {
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.callout.warn {
+  border-color: var(--warn-line);
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+
+.callout.danger {
+  border-color: var(--error-line);
+  background: var(--error-soft);
+  color: var(--error);
+}
+
+.empty {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  padding: 36px 16px;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--r-md);
+  color: var(--muted);
+  text-align: center;
+}
+
+.empty svg {
+  color: var(--line-strong);
+}
+
+/* ── 사실 나열 ─────────────────────────────────────────────────────── */
+.facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
   margin: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+}
+
+.facts > div {
+  min-width: 0;
 }
 
 .facts dt {
-  font-size: 0.8rem;
   color: var(--muted);
+  font-size: 0.78rem;
 }
 
 .facts dd {
@@ -256,11 +1193,7 @@ tr.attention td {
   text-align: left;
 }
 
-.summary {
-  margin: 16px 0 0;
-}
-
-/* 입력 */
+/* ── 입력 ──────────────────────────────────────────────────────────── */
 select,
 input,
 button {
@@ -268,41 +1201,107 @@ button {
   color: inherit;
 }
 
-select,
-input:not([type='radio']) {
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  padding: 5px 8px;
-  max-width: 100%;
+/*
+ * 손가락으로 쓰는 기기에서는 입력 글자를 16px로 올린다. iOS Safari는 16px보다 작은
+ * 입력에 초점이 가면 화면을 확대하고 빠져나올 때 되돌리지 않는다. 확대를 막는
+ * user-scalable=no는 접근성을 깨므로 원인인 글자 크기를 고친다.
+ */
+@media (pointer: coarse) {
+  select,
+  input,
+  textarea {
+    font-size: 16px;
+  }
 }
 
-button {
+select,
+input:not([type="radio"]) {
+  max-width: 100%;
+  padding: 6px 9px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-sm);
   background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  padding: 6px 12px;
+}
+
+select {
   cursor: pointer;
 }
 
-button:hover {
-  border-color: var(--muted);
+button {
+  padding: 7px 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  /*
+   * manipulation은 이 요소가 더블탭 확대를 쓰지 않는다고 알려 준다 — 브라우저가 두 번째
+   * 탭을 기다리지 않고 바로 누른다. user-select는 길게 눌렀을 때 라벨이 선택되는 걸 막는다.
+   * 조작하는 것에만 준다. 본문 글자는 복사할 수 있어야 한다.
+   */
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: background 0.12s, border-color 0.12s, transform 0.1s ease-out;
+}
+
+/*
+ * 누른 티. hover는 위에서 (hover: hover)로 잠갔으니 터치에는 이것만 남는다. 손가락이
+ * 닿는 순간 반응해야 빠르게 느껴진다 — 떼는 순간 반응하면 0ms라도 느리게 읽힌다.
+ */
+button:active:not(:disabled) {
+  transform: scale(0.98);
+  background: var(--surface-sunken);
+}
+
+a,
+summary,
+[role="button"],
+[role="option"] {
+  touch-action: manipulation;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  button:hover:not(:disabled) {
+    border-color: var(--muted);
+    background: var(--surface-2);
+  }
+}
+
+button:disabled {
+  opacity: 0.55;
+  cursor: default;
 }
 
 button.primary {
-  background: var(--accent);
   border-color: var(--accent);
-  color: var(--surface);
-  font-weight: 600;
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  button.primary:hover:not(:disabled) {
+    border-color: var(--accent-hover);
+    background: var(--accent-hover);
+  }
 }
 
 button.link {
+  padding: 0;
   border: none;
   background: none;
-  padding: 0;
   color: var(--muted);
-  text-decoration: underline;
   font-size: 0.85rem;
+  font-weight: 400;
+  text-decoration: underline;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  button.link:hover:not(:disabled) {
+    background: none;
+    color: var(--text);
+  }
 }
 
 :focus-visible {
@@ -310,30 +1309,43 @@ button.link {
   outline-offset: 2px;
 }
 
-.inline-field {
+/*
+ * 위에 붙어 있는 단계 바(.stepbar)가 탭으로 옮겨 온 요소를 덮지 않게 자리를 비켜 준다.
+ * 표의 고정 머리글도 같다.
+ */
+:is(h1, h2, h3, section, tr, button, a, input, select, textarea, summary) {
+  scroll-margin-top: 4.5rem;
+}
+
+.field {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-  margin-top: 12px;
+  color: var(--muted);
+  font-size: 0.88rem;
 }
 
-.panel-head .inline-field {
-  margin-top: 0;
+.field input,
+.field select {
+  color: var(--text);
 }
 
+/* 입력 줄. 상자에 가두지 않고 원장 위에 한 줄로 선다. */
 .controls {
   display: flex;
   flex-wrap: wrap;
-  gap: 16px;
-  margin-bottom: 16px;
+  align-items: end;
+  gap: 14px 24px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--line);
 }
 
 .controls > label {
   display: grid;
   gap: 4px;
-  font-size: 0.85rem;
   color: var(--muted);
+  font-size: 0.82rem;
 }
 
 .controls select {
@@ -341,24 +1353,25 @@ button.link {
 }
 
 fieldset {
-  border: none;
+  display: grid;
+  gap: 3px;
   margin: 0;
   padding: 0;
-  display: grid;
-  gap: 2px;
+  border: none;
   font-size: 0.85rem;
 }
 
 legend {
-  color: var(--muted);
-  padding: 0;
   margin-bottom: 4px;
+  padding: 0;
+  color: var(--muted);
+  font-size: 0.82rem;
 }
 
 fieldset label {
   display: flex;
-  gap: 6px;
   align-items: center;
+  gap: 6px;
 }
 
 .sr-only {
@@ -366,64 +1379,103 @@ fieldset label {
   width: 1px;
   height: 1px;
   overflow: hidden;
-  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
   white-space: nowrap;
 }
 
-/* 파일 */
+/* ── 파일 넣기 ─────────────────────────────────────────────────────── */
 .dropzone {
-  border: 2px dashed var(--line);
-  border-radius: var(--radius);
-  padding: 20px;
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+  padding: 22px;
+  border: 2px dashed var(--line-strong);
+  border-radius: var(--r-lg);
+  background: var(--surface);
   text-align: center;
+  transition: border-color 0.12s, background 0.12s;
 }
 
 .dropzone.dragging {
-  border-color: var(--accent);
+  border-color: var(--mark);
   background: var(--accent-soft);
 }
 
-.dropzone p {
-  margin: 0 0 12px;
+.dropzone > p {
+  max-width: 46ch;
+  color: var(--text-2);
+}
+
+.dropzone .formats {
+  color: var(--muted);
+  font-size: 0.82rem;
 }
 
 .actions {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   justify-content: center;
   gap: 8px;
 }
 
+.spinner {
+  width: 15px;
+  height: 15px;
+  border: 2px solid var(--line-strong);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.busy {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
 .file-list {
-  list-style: none;
-  padding: 0;
-  margin: 16px 0 0;
   display: grid;
   gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
 .file-card {
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 12px 14px;
   min-width: 0;
+  padding: 13px 15px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface-2);
 }
 
 .file-card.failed {
-  border-color: var(--error);
+  border-color: var(--error-line);
+  background: var(--error-soft);
 }
 
-.file-card p {
-  margin: 8px 0 0;
+.file-card > * + * {
+  margin-top: 9px;
 }
 
 .file-head {
   display: flex;
+  align-items: baseline;
   justify-content: space-between;
   gap: 12px;
 }
 
 .file-name {
+  font-size: 0.95rem;
   overflow-wrap: anywhere;
 }
 
@@ -431,7 +1483,6 @@ fieldset label {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
-  margin-top: 8px;
   font-size: 0.85rem;
 }
 
@@ -439,41 +1490,217 @@ fieldset label {
   display: flex;
   align-items: center;
   gap: 6px;
-}
-
-details {
-  margin-top: 12px;
-}
-
-summary {
-  cursor: pointer;
-  font-size: 0.9rem;
-}
-
-.month-detail summary {
   color: var(--muted);
 }
 
-.rule-list {
-  list-style: none;
-  padding: 0;
-  margin: 8px 0 0;
+.file-stat {
+  color: var(--muted);
+  font-size: 0.85rem;
 }
 
-.rule-list li {
-  display: flex;
-  justify-content: space-between;
+/* ── details ───────────────────────────────────────────────────────── */
+details {
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface);
+}
+
+details[open] {
+  padding-bottom: 14px;
+}
+
+details > * + * {
+  margin-top: 10px;
+}
+
+summary {
+  color: var(--text-2);
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  summary:hover {
+    color: var(--text);
+  }
+}
+
+details.warn {
+  border-color: var(--warn-line);
+  background: var(--warn-soft);
+}
+
+details.warn summary {
+  color: var(--warn);
+}
+
+/* ── 푸터 ──────────────────────────────────────────────────────────── */
+.footer {
+  padding: 28px 0 calc(40px + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid var(--line);
+  background: var(--surface-sunken);
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.footer-inner {
+  display: grid;
   gap: 12px;
-  padding: 4px 0;
-  border-bottom: 1px solid var(--line);
 }
 
-@media (max-width: 560px) {
-  .page {
-    padding-top: 20px;
+.footer strong {
+  color: var(--text-2);
+}
+
+.footer ul {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding-left: 1.1em;
+}
+
+.footer .meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+  font-size: 0.8rem;
+}
+
+.footer .meta a {
+  color: var(--accent);
+  text-decoration: none;
+  border-bottom: 1px solid var(--accent-line);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .footer .meta a:hover {
+    color: var(--accent-hover);
+  }
+}
+
+/* ── 좁은 화면 ─────────────────────────────────────────────────────── */
+@media (max-width: 860px) {
+  .net {
+    grid-template-columns: minmax(0, 1fr);
   }
 
-  .panel {
-    padding: 16px;
+  .net-facts {
+    grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+    padding-left: 0;
+    border-left: none;
+  }
+}
+
+@media (max-width: 640px) {
+  body {
+    font-size: 14.5px;
+  }
+
+  .picker select {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .steppanel {
+    padding-top: 18px;
+  }
+
+  .wordmark {
+    font-size: 0.95rem;
+  }
+
+  .privacy-pill {
+    order: 3;
+    justify-content: center;
+    width: 100%;
+  }
+
+  /*
+   * 열이 많은 표는 가로 스크롤 대신 카드로 쌓는다. 값마다 data-label을 달아 헤더가
+   * 사라져도 무슨 숫자인지 읽히게 한다.
+   */
+  table.stack thead {
+    display: none;
+  }
+
+  table.stack,
+  table.stack tbody,
+  table.stack tfoot,
+  table.stack tr,
+  table.stack th,
+  table.stack td {
+    display: block;
+  }
+
+  .table-scroll:has(table.stack) {
+    border: none;
+    border-radius: 0;
+  }
+
+  table.stack tr {
+    padding: 11px 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  table.stack tr:last-child {
+    border-bottom: none;
+  }
+
+  table.stack tbody tr:hover {
+    background: none;
+  }
+
+  table.stack th,
+  table.stack td {
+    padding: 2px 0;
+    border: none;
+    text-align: left;
+  }
+
+  table.stack tr > th:first-child {
+    padding-bottom: 5px;
+    font-size: 1rem;
+  }
+
+  table.stack td {
+    display: grid;
+    grid-template-columns: 7.5em 1fr;
+    align-items: baseline;
+    gap: 10px;
+  }
+
+  table.stack td::before {
+    content: attr(data-label);
+    color: var(--muted);
+    font-size: 0.8rem;
+  }
+
+  table.stack td.num {
+    text-align: left;
+  }
+
+  table.stack tfoot {
+    margin-top: 8px;
+    padding: 6px 10px;
+    border-radius: var(--r-sm);
+    background: var(--surface-2);
+  }
+
+  table.stack tfoot th,
+  table.stack tfoot td {
+    background: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
   }
 }
