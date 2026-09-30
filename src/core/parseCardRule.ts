@@ -15,9 +15,11 @@ import type {
   CardArt,
   CardRule,
   ChoiceGroup,
+  CountLimit,
   DiscountSpec,
   MatchRule,
   PaymentType,
+  Weekday,
   Won,
 } from './types.js';
 
@@ -36,6 +38,7 @@ const EXCLUSION_MODE = ['full', 'discountOnly', 'none'] as const;
 const EXCLUSION_KIND = ['category', 'merchant', 'paymentType'] as const;
 const COUNT_PERIOD = ['month', 'day'] as const;
 const PAYMENT_TYPES = ['lump', 'installment', 'interestFreeInstallment'] as const satisfies readonly PaymentType[];
+const WEEKDAYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const satisfies readonly Weekday[];
 const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
 
 function isObject(value: unknown): value is Record<string, unknown> {
@@ -65,6 +68,15 @@ class Checker {
   won(value: unknown, path: string): Won {
     if (!isWon(value)) {
       this.fail(path, '0 이상의 정수(원)여야 합니다.');
+      return 0;
+    }
+    return value;
+  }
+
+  /** 24시간제 시. 0~23의 정수다. */
+  hour(value: unknown, path: string): number {
+    if (typeof value !== 'number' || !Number.isInteger(value) || value < 0 || value > 23) {
+      this.fail(path, '0부터 23 사이의 정수(시)여야 합니다.');
       return 0;
     }
     return value;
@@ -288,6 +300,34 @@ export function parseCardRule(value: unknown): ParseCardRuleResult {
           if (typeof overseas === 'boolean') match.overseas = overseas;
           else check.fail(`${path}.match.overseas`, 'true 또는 false여야 합니다.');
         }
+        const weekdays = rawMatch['weekdays'];
+        if (weekdays !== undefined) {
+          if (!Array.isArray(weekdays)) {
+            check.fail(`${path}.match.weekdays`, '요일 배열이어야 합니다.');
+          } else {
+            match.weekdays = weekdays.map((item, i) =>
+              check.oneOf(item, `${path}.match.weekdays[${i}]`, WEEKDAYS),
+            );
+          }
+        }
+        const hours = rawMatch['hours'];
+        if (hours !== undefined) {
+          // 잘못 적힌 시간대는 혜택을 통째로 못 붙게 하거나 온종일 붙게 만든다. 둘 다 오류
+          // 없이 할인액만 달라지므로 여기서 막는다.
+          if (!isObject(hours)) check.fail(`${path}.match.hours`, 'from·to를 담은 객체여야 합니다.');
+          else {
+            const from = check.hour(hours['from'], `${path}.match.hours.from`);
+            const to = check.hour(hours['to'], `${path}.match.hours.to`);
+            if (from === to) {
+              check.fail(
+                `${path}.match.hours`,
+                'from과 to가 같습니다. 빈 구간인지 24시간인지 알 수 없으니 조건을 빼거나 범위를 적습니다.',
+              );
+            } else {
+              match.hours = { from, to };
+            }
+          }
+        }
         const types = rawMatch['excludePaymentTypes'];
         if (types !== undefined) {
           if (!Array.isArray(types)) {
@@ -301,19 +341,35 @@ export function parseCardRule(value: unknown): ParseCardRuleResult {
       }
     }
 
+    /** 제한 하나는 객체로, 두 겹("일 1회/월 5회")은 배열로 적는다. */
+    function parseCountLimit(raw: unknown, at: string): CountLimit | null {
+      if (!isObject(raw)) {
+        check.fail(at, '객체여야 합니다.');
+        return null;
+      }
+      const max = raw['max'];
+      if (typeof max !== 'number' || !Number.isInteger(max) || max < 1) {
+        check.fail(`${at}.max`, '1 이상의 정수여야 합니다.');
+      }
+      return {
+        period: check.oneOf(raw['period'], `${at}.period`, COUNT_PERIOD),
+        max: typeof max === 'number' && Number.isInteger(max) && max >= 1 ? max : 1,
+      };
+    }
+
     const rawCount = raw['countLimit'];
-    let countLimit: { period: 'month' | 'day'; max: number } | undefined;
+    let countLimit: CountLimit | CountLimit[] | undefined;
     if (rawCount !== undefined) {
-      if (!isObject(rawCount)) check.fail(`${path}.countLimit`, '객체여야 합니다.');
-      else {
-        const max = rawCount['max'];
-        if (typeof max !== 'number' || !Number.isInteger(max) || max < 1) {
-          check.fail(`${path}.countLimit.max`, '1 이상의 정수여야 합니다.');
+      if (Array.isArray(rawCount)) {
+        // 빈 배열은 "제한 없음"을 적으려다 만 자리일 가능성이 크다. 조건 자체를 빼야 한다.
+        if (rawCount.length === 0) {
+          check.fail(`${path}.countLimit`, '비어 있습니다. 제한이 없다면 countLimit을 적지 않습니다.');
+        } else {
+          const limits = rawCount.map((item, i) => parseCountLimit(item, `${path}.countLimit[${i}]`));
+          countLimit = limits.filter((limit): limit is CountLimit => limit !== null);
         }
-        countLimit = {
-          period: check.oneOf(rawCount['period'], `${path}.countLimit.period`, COUNT_PERIOD),
-          max: typeof max === 'number' && Number.isInteger(max) && max >= 1 ? max : 1,
-        };
+      } else {
+        countLimit = parseCountLimit(rawCount, `${path}.countLimit`) ?? undefined;
       }
     }
 

@@ -83,6 +83,15 @@ scripts/import.ts     명세서를 거래 목록으로 옮기는 CLI
 장부에 적으므로 공동·통합 한도는 일반 혜택이 먼저 가져간다. `TxResult.discount`는 합계이고 겹친 몫은
 `stacked`에 남는다. 실적 제외는 붙은 혜택 중 가장 엄한 쪽을 따른다.
 
+**요일과 시간대는 출처가 다르다**(`MatchRule.weekdays`·`hours`). 요일은 거래 날짜에서 언제나
+나오지만(UTC로 고정해 계산하므로 어디서 돌려도 같은 답), 승인 시간은 명세서가 적어 줄 때만
+`Transaction.time`에 붙는다. 그래서 시간 조건은 해외 결제와 같은 원칙을 따른다 — **표시가 없으면
+그 혜택은 붙지 않는다.** 지금 지원하는 명세서에는 승인시간 컬럼이 없어, 토스 신한 Mr.Life의 Night
+TIME 할인은 내 명세서로 돌리면 한 건도 걸리지 않는다. 구간별 최대 할인표는 한도만 보므로 그대로
+정확하다. 시각은 `{ from, to }`의 24시간제 시이고 `from` 포함·`to` 미포함이며, `from`이 크면
+자정을 넘는 구간이다(21~9). 횟수 제한(`countLimit`)은 배열로 두 겹을 건다 — "일 1회/월 5회"를
+하나만 적으면 어느 쪽을 골라도 할인이 실제보다 많게 잡힌다.
+
 가져오기 흐름: 파일 → 문자열 행렬(`parseCsv` / `readWorkbookRows`) → 포맷 감지 → 컬럼
 매핑 → 행별 정규화 → 취소 상쇄 → 시간순 정렬 → 카테고리 → `Transaction[]`.
 
@@ -167,6 +176,10 @@ npm run sim -- fixtures/cases/08-toss-group-cap.json        # 공동 한도를 �
 npm run sim -- --max fixtures/cards/woori-every1.json       # 한도 없는 1% + 월정액 할인
 npm run sim -- --max fixtures/cards/kb-need-pay.json        # 택1 선택지마다 한 번씩 (--choice pay=naverpay로 하나만)
 npm run sim -- fixtures/cases/12-need-pay-kb-stack.json     # 중복 적용이 붙는 달
+npm run sim -- fixtures/cases/18-mrlife-time-group.json     # 시간대 조건 + 일·월 횟수 두 겹
+npm run sim -- fixtures/cases/19-mrlife-weekend-weekday.json # 주말에만 붙는 혜택
+npm run sim -- --max fixtures/cards/shinhan-toss-mrlife.json # TIME 공동 한도에 잘리는 구간표
+npm run sim -- --max fixtures/cards/samsung-id-select-all.json --choice select1=domestic --choice select2=daily
 npm run sim -- --max fixtures/cards/toss-samsung.json       # 구간별 최대 할인 (공동 한도 포함)
 npm run sim -- --required fixtures/testcards/simple-cafe.json --tier 300000
 npm run import -- fixtures/statements/shinhan-3months.csv    # 명세서 파싱 결과
@@ -177,10 +190,12 @@ npm run import -- fixtures/statements/shinhan-3months.csv    # 명세서 파싱 
 **트리거:** 계산 엔진이나 규칙 스키마를 고친 뒤에는 `verify-calc` 스킬을, 새 카드 약관을 규칙
 JSON으로 옮길 때는 `add-card-rule` 스킬을 쓴다.
 
-에이전트 팀은 아직 구성하지 않았다. 실제 카드는 이제 세 장(토스 삼성카드, 카드의정석 EVERY 1,
-KB국민 NEED Pay)이고, 전부 혜택 안내 페이지만 읽어 옮긴 것이다. `약관 → 규칙 JSON → 골든 케이스 →
-검증` 절차가 세 바퀴 돌았는데 세 번 모두 스키마를 넓히며 끝났다 — 스키마가 아직 굳지 않았다는
-뜻이라, 파이프라인으로 묶는 일은 카드 한두 장이 스키마 변경 없이 들어온 뒤로 미룬다.
+에이전트 팀은 아직 구성하지 않았다. 실제 카드는 이제 다섯 장(토스 삼성카드, 카드의정석 EVERY 1,
+KB국민 NEED Pay, 삼성 iD SELECT ALL, 토스 신한카드 Mr.Life)이고, 전부 혜택 안내 페이지만 읽어
+옮긴 것이다. `약관 → 규칙 JSON → 골든 케이스 → 검증` 절차가 다섯 바퀴 돌았고, **네 번째(삼성 iD
+SELECT ALL)에서 처음으로 스키마를 넓히지 않고 들어왔다** — 택1·한도 없음·해외가 이미 있어서다.
+다섯 번째는 다시 넓혔다(요일·시간대·횟수 두 겹). 파이프라인으로 묶는 일은 스키마 변경 없이
+들어오는 카드가 한 장 더 쌓인 뒤로 미룬다.
 
 **규칙 JSON을 쓰다 스키마에 자리가 없으면 멈춘다.** 지금까지 막힌 자리는
 `.claude/skills/add-card-rule/SKILL.md` 5절에 모아 둔다. 거기 적힌 것을 엔진에 넣기로
@@ -219,3 +234,5 @@ KB국민 NEED Pay)이고, 전부 혜택 안내 페이지만 읽어 옮긴 것이
 | 2026-09-30 | 해외 결제 구분, 해외 2% 할인 복원 | CLAUDE.md, .claude/skills/add-card-rule/SKILL.md, src/core/(types·match·parseCardRule), src/import/(types·statement·formats/woori), src/app/panels/SimulationPanel.tsx, fixtures/cards/(toss-samsung·kb-need-pay).json, fixtures/cases/14·15 | 사용자가 우리카드 명세서의 `국외일시불` 행을 보여 줬다. 파서는 원화 금액을 고르느라 이미 이 칸을 읽고 있었는데 그 사실을 거래에 남기지 않아, 토스·NEED Pay의 해외 2%를 "가를 수 없다"며 빼 두었던 것이다. `Transaction.overseas`·`StatementFormat.isOverseas`·`MatchRule.overseas`를 넣고 두 카드에 해외 2%를 되살렸다(한도 없음, 전월실적 조건 없음). NEED Pay 간편결제는 "국내 가맹점 이용 시 제공"이라 `overseas: false`. 토스의 해외 2%는 전월 이용금액 제외 목록에 없어 `excludeFromSpending: none`이다 — NEED Pay(전 혜택 제외)와 반대라 골든 케이스 둘로 나눠 못 박았다. 실제 명세서(거래 106건)에서 해외 1건이 원화 33,170원으로 잡히는 것도 확인했다. 결과 상세의 업종 칸에 `해외` 표시 |
 | 2026-09-30 | 구간 채우기를 실제 거래 표본으로 | CLAUDE.md, src/core/(types·pattern·requiredSpend·index), src/core/__tests__/(requiredSpend·pattern).test.ts, src/app/panels/RequiredSpendPanel.tsx | 실제 카드 세 장 모두 "할인받아 빠지는 몫"이 언제나 0원이었다. 가상 거래가 업종 비중으로만 만들어져 가맹점명 자리에 업종 이름이 들어가고 해외 표시도 없어서, 가맹점명·해외로 붙는 혜택이 한 건도 걸리지 않았다 — 업종으로 맞추는 가상 카드로만 테스트해 드러나지 않았다. `SpendingPattern.samples`를 넣어 내 명세서의 거래를 가맹점·해외·결제유형 그대로 순서대로 되풀이한다(금액을 비율로 늘리면 건당 최소금액이 틀어진다). 예시 패턴은 업종만 담으므로 그런 혜택이 있는 카드에서는 계산에 들어가지 않는다고 화면에 적는다. 빠지는 몫이 0원일 때 할인이 없어서인지, 할인받아도 실적에 넣는 혜택이라서인지(EVERY 1) 문구를 갈랐다 |
 | 2026-10-01 | GitHub Pages 배포 | CLAUDE.md, .github/workflows/deploy.yml, vite.config.ts, index.html, src/app/shell/Footer.tsx | 무료로 공개하려고 GitHub Pages를 골랐다(저장소가 이미 공개라 추가 계정이 필요 없다). 사이트가 `/card-benefit-calc/` 아래에 서므로 `base`를 `BASE_PATH`로 받고, 페이지 사이 절대 링크(`/app/`, `/`)를 상대 경로로 바꿨다. 워크플로는 `npm test`·`typecheck`를 통과해야 배포한다 |
+| 2026-10-01 | 삼성 iD SELECT ALL 규칙 — 스키마를 넓히지 않고 들어온 첫 카드 | CLAUDE.md, fixtures/cards/samsung-id-select-all.json, fixtures/cases/16·17 | 택1 두 그룹(SELECT 1 셋·SELECT 2 둘)·한도 없음·해외 2%가 전부 이미 있는 자리에 맞아, 네 바퀴 만에 처음으로 엔진을 건드리지 않고 규칙만 썼다. 한 거래에 여러 혜택이 걸릴 때 약관이 말하는 "할인 혜택이 큰 금액만 적용"은 `rank`가 우선순위 동률에서 할인액이 큰 쪽을 먼저 보는 동작과 같은 결과라 priority를 적지 않았다. 0.7%(한도 없음)를 고르면 7% 한도가 소진된 뒤 그 아래를 받치는데, 골든 케이스 17이 그 넘어가는 자리를 못 박는다. 의료를 업종이 아니라 가맹점명(병원·의원·약국)으로 맞춘 이유는 온라인몰·배달앱과 한 혜택이라 카테고리를 함께 걸면 AND가 되어 아무것도 잡히지 않기 때문이다. 전월 이용금액 제외 목록에 0.7%·생활편의·디지털·해외가 없어 그 넷만 `none`이다 |
+| 2026-10-01 | 요일·시간대 조건과 횟수 제한 두 겹, 토스 신한카드 Mr.Life 규칙 | CLAUDE.md, .claude/skills/add-card-rule/SKILL.md, src/core/(types·match·discount·parseCardRule), src/core/__tests__/(schedule·countLimits).test.ts, fixtures/cards/shinhan-toss-mrlife.json, fixtures/cases/18·19 | 다섯 번째 카드가 세 곳에서 막혔다 — "주말(토/일)", "오후 9시~오전 9시", "주유 리터당 60원". 사용자가 앞의 둘을 엔진에서 풀기로 정했다. 요일은 거래 날짜에서 나오므로 정확히 계산되고(UTC 고정), 승인 시간은 명세서가 적어 줄 때만 `Transaction.time`에 붙어 없으면 매칭하지 않는다 — 해외 표기와 같은 원칙이다. 짐작으로 붙이면 밤에 쓰지 않은 결제가 할인으로 잡혀 조용히 부푼다. 옮기는 중에 "일 1회/월 5회"가 한 번 더 막았다: `countLimit` 하나로는 어느 쪽을 골라도 과대 계산이라 배열을 받게 넓혔고, 기존 표기는 그대로 둬서 카드 셋과 골든 케이스를 건드리지 않았다(규칙 7). 리터당 할인은 유가가 매달 바뀌어 넣지 못했고, 같은 한도를 나눠 쓰는 주말 할인이 그만큼 덜 찬다. 이 카드는 안내문에 "할인받은 이용금액 제외" 문구가 없어 전 혜택 `none`으로 뒀다 — 상품설명서로 가장 먼저 확인할 자리다 |

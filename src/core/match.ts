@@ -1,4 +1,39 @@
-import type { Benefit, Transaction } from './types.js';
+import type { Benefit, HourRange, Transaction, Weekday } from './types.js';
+
+/** `Date.getUTCDay()`가 돌려주는 0~6 순서. */
+const WEEKDAYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const satisfies readonly Weekday[];
+
+/**
+ * 거래 날짜의 요일.
+ *
+ * 같은 날짜 문자열이 어디서 돌아도 같은 요일이어야 하므로 UTC로 고정해 계산한다. 로컬
+ * 시간대로 파싱하면 서버와 브라우저에서 다른 답이 나올 수 있다.
+ */
+function weekdayOf(date: string): Weekday | null {
+  const matched = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
+  if (matched === null) return null;
+  const [, year, month, day] = matched;
+  const at = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
+  return WEEKDAYS[at.getUTCDay()] ?? null;
+}
+
+/** `HH:MM`을 자정부터의 분으로. 형식이 어긋나면 null이다. */
+function minutesOf(time: string): number | null {
+  const matched = /^(\d{1,2}):(\d{2})$/.exec(time);
+  if (matched === null) return null;
+  const [, hour, minute] = matched;
+  const h = Number(hour);
+  const m = Number(minute);
+  if (h < 0 || h > 23 || m < 0 || m > 59) return null;
+  return h * 60 + m;
+}
+
+/** `from` 포함, `to` 미포함. `from`이 더 크면 자정을 넘는 구간이다. */
+function withinHours(minutes: number, range: HourRange): boolean {
+  const from = range.from * 60;
+  const to = range.to * 60;
+  return from < to ? minutes >= from && minutes < to : minutes >= from || minutes < to;
+}
 
 /**
  * 가맹점명 비교용 정규화.
@@ -23,12 +58,30 @@ function includesAny(haystack: string, needles: readonly string[]): boolean {
  * "카페 업종 할인, 단 공항 매장 제외" 같은 약관 문구를 그대로 표현하기 위해서다.
  */
 export function matchesBenefit(tx: Transaction, benefit: Benefit): boolean {
-  const { categories, merchants, excludeMerchants, excludeCategories, excludePaymentTypes, overseas } =
-    benefit.match;
+  const {
+    categories,
+    merchants,
+    excludeMerchants,
+    excludeCategories,
+    excludePaymentTypes,
+    overseas,
+    weekdays,
+    hours,
+  } = benefit.match;
 
   // 해외 표시가 없는 거래는 국내로 본다.
   if (overseas !== undefined && overseas !== (tx.overseas === true)) {
     return false;
+  }
+  if (weekdays !== undefined && weekdays.length > 0) {
+    const day = weekdayOf(tx.date);
+    if (day === null || !weekdays.includes(day)) return false;
+  }
+  // 승인 시간을 모르는 거래에는 시간대 혜택을 붙이지 않는다. 짐작으로 붙이면 밤에 쓰지 않은
+  // 결제가 할인으로 잡혀, 오류 없이 할인액만 늘어난다.
+  if (hours !== undefined) {
+    const minutes = tx.time === undefined ? null : minutesOf(tx.time);
+    if (minutes === null || !withinHours(minutes, hours)) return false;
   }
   if (excludeMerchants?.length && includesAny(tx.merchant, excludeMerchants)) {
     return false;

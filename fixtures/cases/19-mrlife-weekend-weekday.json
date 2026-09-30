@@ -1,0 +1,39 @@
+{
+  "id": "19-mrlife-weekend-weekday",
+  "description": "토스 신한카드 Mr.Life, 주말 할인이 요일을 가리는 달과 월납 할인의 일 1회. 1월(전월 1,000,000 → 100만 구간, 주말 할인마트 10,000·월납 10,000). 2026-01-03은 토요일, 01-04는 일요일, 01-05는 월요일, 01-10은 토요일이다. w1(토) 이마트 60,000: 10%=6,000이지만 \"1회 승인금액 5만원까지\"라 5,000(perTransaction). w2는 같은 토요일이라 일 1회에 막힌다(countLimit). w3(일) 홈플러스 100,000: 다시 5,000이 붙어 월 한도 10,000이 정확히 찬다. w4(월) 이마트 50,000: 평일이라 아예 매칭되지 않는다(noMatch) — 요일 조건이 없으면 여기서 5,000이 더 붙어 할인이 조용히 부풀 자리다. w5(토) 50,000: 요일은 맞지만 한도가 비어 benefitCapReached. 월납은 b1(한국전력 60,000)이 5,000, 같은 날 b2는 일 1회에 막히고, b3가 남은 5,000을 채운 뒤 b4가 benefitCapReached. b3는 50,000의 10%가 건당 상한과도 월 한도 잔액과도 정확히 같은 5,000이라 어느 쪽으로도 잘리지 않는다(cappedBy 없음) — 넘어야 잘린 것이다. 합 5,000×4=20,000. 이 카드는 할인받은 건도 실적에 그대로 남으므로(excludeFromSpending: none) 1월 실적은 거래 전액 합 290,000+210,000=500,000이다.",
+  "card": "shinhan-toss-mrlife",
+  "initialPrevSpending": 1000000,
+  "transactions": [
+    { "id": "w1", "date": "2026-01-03", "amount": 60000, "merchant": "이마트 성수점", "category": "mart" },
+    { "id": "w2", "date": "2026-01-03", "amount": 30000, "merchant": "롯데마트 서울역점", "category": "mart" },
+    { "id": "w3", "date": "2026-01-04", "amount": 100000, "merchant": "홈플러스 월드컵점", "category": "mart" },
+    { "id": "w4", "date": "2026-01-05", "amount": 50000, "merchant": "이마트 성수점", "category": "mart" },
+    { "id": "b1", "date": "2026-01-06", "amount": 60000, "merchant": "한국전력 전기요금", "category": "utility" },
+    { "id": "b2", "date": "2026-01-06", "amount": 50000, "merchant": "SKT 통신요금", "category": "telecom" },
+    { "id": "b3", "date": "2026-01-07", "amount": 50000, "merchant": "SKT 통신요금", "category": "telecom" },
+    { "id": "b4", "date": "2026-01-08", "amount": 50000, "merchant": "SKT 통신요금", "category": "telecom" },
+    { "id": "w5", "date": "2026-01-10", "amount": 50000, "merchant": "이마트 성수점", "category": "mart" }
+  ],
+  "expect": {
+    "months": [
+      {
+        "month": "2026-01",
+        "tierMin": 1000000,
+        "prevSpending": 1000000,
+        "totalDiscount": 20000,
+        "countedSpending": 500000,
+        "transactions": {
+          "w1": { "discount": 5000, "reason": "ok", "cappedBy": "perTransaction", "appliedBenefitId": "weekend-mart", "countedSpending": 60000 },
+          "w2": { "discount": 0, "reason": "countLimit", "appliedBenefitId": null, "countedSpending": 30000 },
+          "w3": { "discount": 5000, "reason": "ok", "cappedBy": "perTransaction", "appliedBenefitId": "weekend-mart", "countedSpending": 100000 },
+          "w4": { "discount": 0, "reason": "noMatch", "appliedBenefitId": null, "countedSpending": 50000 },
+          "b1": { "discount": 5000, "reason": "ok", "cappedBy": "perTransaction", "appliedBenefitId": "bill", "countedSpending": 60000 },
+          "b2": { "discount": 0, "reason": "countLimit", "appliedBenefitId": null, "countedSpending": 50000 },
+          "b3": { "discount": 5000, "reason": "ok", "cappedBy": null, "appliedBenefitId": "bill", "countedSpending": 50000 },
+          "b4": { "discount": 0, "reason": "benefitCapReached", "appliedBenefitId": null, "countedSpending": 50000 },
+          "w5": { "discount": 0, "reason": "benefitCapReached", "appliedBenefitId": null, "countedSpending": 50000 }
+        }
+      }
+    ]
+  }
+}

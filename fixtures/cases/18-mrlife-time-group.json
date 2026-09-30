@@ -1,0 +1,60 @@
+{
+  "id": "18-mrlife-time-group",
+  "description": "토스 신한카드 Mr.Life, TIME 할인 통합 한도를 편의점과 Night TIME 식음료가 나눠 쓰는 달. 1월(전월 300,000 → 30만 구간, TIME 통합 한도 10,000). 편의점은 1회 승인금액 1만원까지(1회 최대 1천원)이고 일 1회/월 5회다 — c1은 1만원의 10%가 건당 상한과 정확히 같은 1,000이라 잘렸다고 표시하지 않고(cappedBy 없음), 같은 날 c2는 일 제한에 막히며(countLimit), c3~c6이 하루씩 걸러 1,000씩 받아 월 5회를 채운다(누적 5,000). 식음료는 15,000의 10%가 1,500이라 건당 상한 1,000에 실제로 잘린다(perTransaction) — 같은 상한이라도 경계에 걸리는 건과 넘는 건이 다르게 남는다. 식음료는 승인시간이 오후 9시~오전 9시일 때만 붙는다 — n1(22:30) 1,000, n2(13:00)는 시간대 밖이라 noMatch, n3~n6(23:00)이 1,000씩. n6에서 통합 한도 10,000이 정확히 차므로 잘렸다고 표시하지 않고, n7은 같은 그룹이 다 써 버려 groupCapReached다(식음료 자체 한도는 5,000이나 남아 있다). n8은 승인시간이 없는 거래라 시간대 혜택이 붙지 않는다(noMatch) — 짐작으로 붙이지 않는다는 원칙이 그대로 드러나는 자리다. 합 5,000+5,000=10,000. 이 카드는 안내문에 \"할인받은 이용금액 제외\" 문구가 없어 모든 혜택이 excludeFromSpending: none이라, 할인을 받은 건도 실적에 그대로 남는다 — 1월 실적은 거래 전액 합인 60,000+120,000=180,000이다. 2월(전월 180,000 → 30만 미만): 편의점 한도가 0이라 tierLocked.",
+  "card": "shinhan-toss-mrlife",
+  "initialPrevSpending": 300000,
+  "transactions": [
+    { "id": "c1", "date": "2026-01-05", "amount": 10000, "merchant": "GS25 왕십리점", "category": "convenience" },
+    { "id": "c2", "date": "2026-01-05", "amount": 10000, "merchant": "CU 성수점", "category": "convenience" },
+    { "id": "c3", "date": "2026-01-06", "amount": 10000, "merchant": "GS25 왕십리점", "category": "convenience" },
+    { "id": "c4", "date": "2026-01-07", "amount": 10000, "merchant": "GS25 왕십리점", "category": "convenience" },
+    { "id": "c5", "date": "2026-01-08", "amount": 10000, "merchant": "GS25 왕십리점", "category": "convenience" },
+    { "id": "c6", "date": "2026-01-09", "amount": 10000, "merchant": "GS25 왕십리점", "category": "convenience" },
+    { "id": "n1", "date": "2026-01-10", "time": "22:30", "amount": 15000, "merchant": "한식당 소담", "category": "restaurant" },
+    { "id": "n2", "date": "2026-01-11", "time": "13:00", "amount": 15000, "merchant": "한식당 소담", "category": "restaurant" },
+    { "id": "n3", "date": "2026-01-12", "time": "23:00", "amount": 15000, "merchant": "한식당 소담", "category": "restaurant" },
+    { "id": "n4", "date": "2026-01-13", "time": "23:00", "amount": 15000, "merchant": "한식당 소담", "category": "restaurant" },
+    { "id": "n5", "date": "2026-01-14", "time": "23:00", "amount": 15000, "merchant": "한식당 소담", "category": "restaurant" },
+    { "id": "n6", "date": "2026-01-15", "time": "23:00", "amount": 15000, "merchant": "한식당 소담", "category": "restaurant" },
+    { "id": "n7", "date": "2026-01-16", "time": "23:00", "amount": 15000, "merchant": "한식당 소담", "category": "restaurant" },
+    { "id": "n8", "date": "2026-01-17", "amount": 15000, "merchant": "한식당 소담", "category": "restaurant" },
+    { "id": "g1", "date": "2026-02-03", "amount": 10000, "merchant": "GS25 왕십리점", "category": "convenience" }
+  ],
+  "expect": {
+    "months": [
+      {
+        "month": "2026-01",
+        "tierMin": 300000,
+        "prevSpending": 300000,
+        "totalDiscount": 10000,
+        "countedSpending": 180000,
+        "transactions": {
+          "c1": { "discount": 1000, "reason": "ok", "cappedBy": null, "appliedBenefitId": "time-convenience", "countedSpending": 10000 },
+          "c2": { "discount": 0, "reason": "countLimit", "appliedBenefitId": null, "countedSpending": 10000 },
+          "c3": { "discount": 1000, "reason": "ok", "cappedBy": null, "appliedBenefitId": "time-convenience", "countedSpending": 10000 },
+          "c4": { "discount": 1000, "reason": "ok", "cappedBy": null, "appliedBenefitId": "time-convenience", "countedSpending": 10000 },
+          "c5": { "discount": 1000, "reason": "ok", "cappedBy": null, "appliedBenefitId": "time-convenience", "countedSpending": 10000 },
+          "c6": { "discount": 1000, "reason": "ok", "cappedBy": null, "appliedBenefitId": "time-convenience", "countedSpending": 10000 },
+          "n1": { "discount": 1000, "reason": "ok", "cappedBy": "perTransaction", "appliedBenefitId": "night-food", "countedSpending": 15000 },
+          "n2": { "discount": 0, "reason": "noMatch", "appliedBenefitId": null, "countedSpending": 15000 },
+          "n3": { "discount": 1000, "reason": "ok", "cappedBy": "perTransaction", "appliedBenefitId": "night-food", "countedSpending": 15000 },
+          "n4": { "discount": 1000, "reason": "ok", "cappedBy": "perTransaction", "appliedBenefitId": "night-food", "countedSpending": 15000 },
+          "n5": { "discount": 1000, "reason": "ok", "cappedBy": "perTransaction", "appliedBenefitId": "night-food", "countedSpending": 15000 },
+          "n6": { "discount": 1000, "reason": "ok", "cappedBy": "perTransaction", "appliedBenefitId": "night-food", "countedSpending": 15000 },
+          "n7": { "discount": 0, "reason": "groupCapReached", "appliedBenefitId": null, "countedSpending": 15000 },
+          "n8": { "discount": 0, "reason": "noMatch", "appliedBenefitId": null, "countedSpending": 15000 }
+        }
+      },
+      {
+        "month": "2026-02",
+        "tierMin": 0,
+        "prevSpending": 180000,
+        "totalDiscount": 0,
+        "countedSpending": 10000,
+        "transactions": {
+          "g1": { "discount": 0, "reason": "tierLocked", "appliedBenefitId": null, "countedSpending": 10000 }
+        }
+      }
+    ]
+  }
+}

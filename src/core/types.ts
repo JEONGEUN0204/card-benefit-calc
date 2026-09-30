@@ -53,6 +53,30 @@ export interface MatchRule {
    * "해외 가맹점 2%"와 "국내 가맹점 이용 시 제공"을 옮기는 자리다.
    */
   overseas?: boolean;
+  /**
+   * 이 요일에만 붙는다. "주말할인서비스는 공휴일 여부와 상관없이 토요일/일요일에 해당".
+   * 비우면 요일 조건 없음. 요일은 거래 날짜에서 계산하므로 명세서가 따로 적어 줄 필요가 없다.
+   */
+  weekdays?: Weekday[];
+  /**
+   * 이 시간대에만 붙는다. "승인시간 기준으로 오후 9시부터 오전 9시까지"는 `{ from: 21, to: 9 }`다.
+   * 24시간제 시(hour) 단위이고 `from`은 포함, `to`는 미포함이다. `from`이 `to`보다 크면 자정을
+   * 넘는 구간으로 읽는다.
+   *
+   * 승인 시간은 명세서가 적어 줄 때만 거래에 붙는다(`Transaction.time`). 시간을 모르는 거래에는
+   * 이 조건이 붙은 혜택이 매칭되지 않는다 — 해외 표시가 없는 거래를 국내로 보는 것과 같은
+   * 원칙이다. 짐작으로 붙이면 밤에 쓰지 않은 결제가 할인으로 잡혀 할인액이 조용히 부푼다.
+   */
+  hours?: HourRange;
+}
+
+/** 요일. `Transaction.date`에서 계산한다. */
+export type Weekday = 'sun' | 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat';
+
+/** 시간대. 24시간제 시 단위이고, `from` 포함 `to` 미포함이다. */
+export interface HourRange {
+  from: number;
+  to: number;
 }
 
 /** 할인 방식. 정률 또는 정액. */
@@ -99,7 +123,11 @@ export interface Benefit {
    * 적는다. 키가 없는 것과는 다르다 — 키가 없으면 여전히 0이다.
    */
   monthlyCapByTier: Record<string, Won | null>;
-  countLimit?: CountLimit;
+  /**
+   * 혜택 사용 횟수 제한. 여럿이면 모두 함께 걸린다 — "일 1회/월 5회 할인 적용"처럼 제한이 두
+   * 겹인 약관이 있고, 하나만 적으면 어느 쪽을 골라도 할인이 실제보다 많게 잡힌다.
+   */
+  countLimit?: CountLimit | CountLimit[];
   /** 이 혜택이 속한 `CapGroup.id`. 같은 그룹의 혜택끼리 한 한도를 나눠 쓴다. */
   capGroup?: string;
   /**
@@ -201,6 +229,13 @@ export interface Transaction {
    * 국내로 본다 — 해외 표기가 없는 명세서에서는 해외 혜택이 잡히지 않는다.
    */
   overseas?: boolean;
+  /**
+   * 승인 시간. `HH:MM`(24시간제). 명세서가 적어 줄 때만 파서가 붙인다.
+   *
+   * 없으면 시간대 조건(`MatchRule.hours`)이 붙은 혜택은 이 거래에 매칭되지 않는다. 날짜만
+   * 적는 명세서가 대부분이라, 그런 명세서에서는 밤 시간대 혜택이 잡히지 않는다.
+   */
+  time?: string;
 }
 
 /**

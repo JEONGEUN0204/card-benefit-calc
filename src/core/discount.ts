@@ -5,6 +5,7 @@ import { benefitCapFor, groupCapFor, totalCapFor } from './tier.js';
 import type {
   Benefit,
   CardRule,
+  CountLimit,
   DiscountReason,
   StackedDiscount,
   Tier,
@@ -43,8 +44,16 @@ interface Ledger {
   counts: Record<string, number>;
 }
 
-function countKey(benefit: Benefit, date: string): string {
-  return benefit.countLimit?.period === 'day' ? `${benefit.id}|${date}` : benefit.id;
+/** 제한 하나를 적든 여럿을 적든 같은 자리에서 본다. */
+function countLimitsOf(benefit: Benefit): readonly CountLimit[] {
+  const limit = benefit.countLimit;
+  if (limit === undefined) return [];
+  return Array.isArray(limit) ? limit : [limit];
+}
+
+/** 제한마다 따로 세야 일 제한과 월 제한이 서로를 덮지 않는다. */
+function countKey(benefit: Benefit, limit: CountLimit, date: string): string {
+  return limit.period === 'day' ? `${benefit.id}|day|${date}` : `${benefit.id}|month`;
 }
 
 /**
@@ -97,9 +106,10 @@ function evaluate(
   // 약관의 "N원 이상"은 경계를 포함한다.
   if (min !== undefined && tx.amount < min) return blocked(tx.id, 'belowMin');
 
-  const limit = benefit.countLimit;
-  if (limit !== undefined && (ledger.counts[countKey(benefit, tx.date)] ?? 0) >= limit.max) {
-    return blocked(tx.id, 'countLimit');
+  for (const limit of countLimitsOf(benefit)) {
+    if ((ledger.counts[countKey(benefit, limit, tx.date)] ?? 0) >= limit.max) {
+      return blocked(tx.id, 'countLimit');
+    }
   }
 
   const potential = potentialDiscount(tx, benefit, rule);
@@ -144,8 +154,10 @@ function evaluate(
 function record(ledger: Ledger, benefit: Benefit, date: string, discount: Won): void {
   ledger.capUsage[benefit.id] = (ledger.capUsage[benefit.id] ?? 0) + discount;
   ledger.totalCapUsed += discount;
-  const key = countKey(benefit, date);
-  ledger.counts[key] = (ledger.counts[key] ?? 0) + 1;
+  for (const limit of countLimitsOf(benefit)) {
+    const key = countKey(benefit, limit, date);
+    ledger.counts[key] = (ledger.counts[key] ?? 0) + 1;
+  }
   if (benefit.capGroup !== undefined) {
     ledger.groupUsage[benefit.capGroup] = (ledger.groupUsage[benefit.capGroup] ?? 0) + discount;
   }
