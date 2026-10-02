@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ALL_SCOPE, scopeGroups, scopeKeyOf } from '../scope.js';
+import { ALL_SCOPE, REST_POOL, poolsForBenefit, scopeGroups, scopeKeyOf, spendPools } from '../scope.js';
 import { benefit, card, must } from './helpers.js';
 
 /**
@@ -204,5 +204,87 @@ describe('scopeGroups', () => {
     expect(scopeKeyOf(groups, 'A', 'shop')).toBe('c:online');
     expect(scopeKeyOf(groups, 'A', 'every')).toBe(ALL_SCOPE);
     expect(scopeKeyOf(groups, 'A', '없는혜택')).toBeNull();
+  });
+});
+
+/*
+ * 지출 풀과 혜택은 다른 것이다.
+ *
+ * 풀은 **돈을 담는 통**이고 서로 겹치지 않는다 — 한 결제는 정확히 한 통에 들어간다.
+ * 혜택은 여러 통에서 벌 수 있다. 전 가맹점 혜택(EVERY 1의 1%)이 그렇다.
+ *
+ * "나머지 결제" 통이 꼭 있어야 한다. 팟 카드로 40만원을 쓸 때 할인 대상은 15~20만원뿐이고
+ * 남은 돈은 **할인 0원이지만 실적을 쌓아 한도를 여는** 지출이다. 그 돈을 담을 통이 없으면
+ * 배분기가 "구간을 열기 위해 쓰는 돈"을 표현할 수 없고, 한계 할인율이 0인 카드에는 한 푼도
+ * 배정하지 않아 상위 구간을 영원히 못 연다.
+ */
+describe('지출 풀', () => {
+  it('구체 풀들과 나머지 풀을 돌려준다', () => {
+    const cards = [
+      card({
+        id: 'A',
+        benefits: [
+          benefit({ id: 'shop', match: { categories: ['online'] } }),
+          benefit({ id: 'cafe', match: { merchants: ['스타벅스'] } }),
+        ],
+      }),
+    ];
+    const pools = spendPools(scopeGroups(cards));
+    expect(pools).toEqual(['c:online', 'm:스타벅스', REST_POOL]);
+  });
+
+  it('전 가맹점 혜택만 있는 카드는 나머지 풀 하나로 끝난다', () => {
+    const cards = [card({ id: 'A', benefits: [benefit({ id: 'every', match: {} })] })];
+    expect(spendPools(scopeGroups(cards))).toEqual([REST_POOL]);
+  });
+
+  it('구체 혜택은 자기 풀에서만 번다', () => {
+    const cards = [
+      card({ id: 'A', benefits: [benefit({ id: 'shop', match: { categories: ['online'] } })] }),
+    ];
+    const groups = scopeGroups(cards);
+    expect(poolsForBenefit(groups, 'A', 'shop')).toEqual(['c:online']);
+  });
+
+  it('전 가맹점 혜택은 모든 풀에서 번다 — 나머지 풀까지', () => {
+    const cards = [
+      card({
+        id: 'A',
+        benefits: [
+          benefit({ id: 'shop', match: { categories: ['online'] } }),
+          benefit({ id: 'every', match: {} }),
+        ],
+      }),
+    ];
+    const groups = scopeGroups(cards);
+    expect(poolsForBenefit(groups, 'A', 'every')).toEqual(['c:online', REST_POOL]);
+  });
+
+  it('두 카드가 섞여도 전 가맹점 혜택은 다른 카드의 풀에서도 번다', () => {
+    // EVERY 1의 1%는 팟 카드가 쇼핑에 쓰라고 만든 풀의 돈에도 붙는다 — 그 돈을 EVERY 1으로
+    // 결제하면 그렇다. 배분기가 그 선택을 할 수 있어야 한다.
+    const cards = [
+      card({ id: 'POT', benefits: [benefit({ id: 'shop', match: { categories: ['online'] } })] }),
+      card({ id: 'EVERY', benefits: [benefit({ id: 'every', match: {} })] }),
+    ];
+    const groups = scopeGroups(cards);
+    expect(poolsForBenefit(groups, 'EVERY', 'every')).toEqual(['c:online', REST_POOL]);
+    expect(poolsForBenefit(groups, 'POT', 'shop')).toEqual(['c:online']);
+  });
+
+  it('없는 혜택을 물으면 빈 목록이다', () => {
+    const groups = scopeGroups([card({ id: 'A', benefits: [benefit({ id: 'b', match: {} })] })]);
+    expect(poolsForBenefit(groups, 'A', '없음')).toEqual([]);
+    expect(poolsForBenefit(groups, '없음', 'b')).toEqual([]);
+  });
+
+  it('나머지 풀 키는 그룹 키와 겹치지 않는다', () => {
+    // 카테고리 이름이 'rest'인 카드가 와도 키가 부딫치지 않아야 한다.
+    const groups = scopeGroups([
+      card({ id: 'A', benefits: [benefit({ id: 'b', match: { categories: ['rest'] } })] }),
+    ]);
+    expect(groups.map((g) => g.key)).toEqual(['c:rest']);
+    expect(spendPools(groups)).toEqual(['c:rest', REST_POOL]);
+    expect(REST_POOL).not.toBe('c:rest');
   });
 });

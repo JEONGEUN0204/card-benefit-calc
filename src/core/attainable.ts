@@ -85,7 +85,7 @@ function qualifyingDays(benefit: Benefit): number {
 }
 
 /** 월 환산 횟수 제한. 제한이 없으면 무한대다. */
-function effectiveCount(benefit: Benefit): number {
+export function effectiveCountOf(benefit: Benefit): number {
   let month = Number.POSITIVE_INFINITY;
   let day = Number.POSITIVE_INFINITY;
   for (const limit of countLimitsOf(benefit)) {
@@ -102,7 +102,7 @@ function effectiveCount(benefit: Benefit): number {
  * 정액 할인은 건당 최소금액이 분모다 — 2,000원 할인에 1만원 이상 결제 조건이면 0.2다.
  * 조건이 없으면 결제액이 할인액과 같을 때가 가장 효율적이라 1.0이 된다.
  */
-function effectiveRate(benefit: Benefit): number {
+export function effectiveRateOf(benefit: Benefit): number {
   const spec = benefit.discount;
   if (spec.type === 'rate') return spec.rate;
   const amount = Math.min(spec.amount, benefit.perTransactionCap ?? Number.POSITIVE_INFINITY);
@@ -110,7 +110,7 @@ function effectiveRate(benefit: Benefit): number {
   return amount / ticket;
 }
 
-interface Plan {
+export interface BenefitPlan {
   discount: Won;
   spend: Won;
   txCount: number;
@@ -119,7 +119,7 @@ interface Plan {
   countBound: boolean;
 }
 
-const EMPTY: Plan = { discount: 0, spend: 0, txCount: 0, ticket: 0, countBound: false };
+const EMPTY: BenefitPlan = { discount: 0, spend: 0, txCount: 0, ticket: 0, countBound: false };
 
 /**
  * 쓸 수 있는 돈 `avail`과 받을 수 있는 할인 상한 `maxDiscount` 아래에서 가장 많이 받는 방법.
@@ -127,13 +127,18 @@ const EMPTY: Plan = { discount: 0, spend: 0, txCount: 0, ticket: 0, countBound: 
  * 닫힌 식으로 푼다 — 건당 상한이 작고 횟수 제한이 없으면 건수가 수만 건까지 늘 수 있어
  * 건별로 돌리면 느려진다. 절사는 건별로 일어나므로 `roundDiscount`를 건당 할인액에 건다.
  */
-function planFor(benefit: Benefit, rule: CardRule, avail: Won, maxDiscount: Won): Plan {
+export function benefitPlanFor(
+  benefit: Benefit,
+  rule: CardRule,
+  avail: Won,
+  maxDiscount: Won,
+): BenefitPlan {
   if (avail <= 0 || maxDiscount <= 0) return EMPTY;
 
   const min = benefit.minTransaction ?? 0;
   const spec = benefit.discount;
   const perTxCap = benefit.perTransactionCap ?? Number.POSITIVE_INFINITY;
-  const count = effectiveCount(benefit);
+  const count = effectiveCountOf(benefit);
 
   if (spec.type === 'amount') {
     const amount = roundDiscount(Math.min(spec.amount, perTxCap), rule.rounding);
@@ -224,7 +229,7 @@ export function attainableByTier(
   // 할인율 내림차순. 동률이면 규칙에 적힌 순서를 지켜 같은 입력이 같은 답을 내게 한다.
   const order = rule.benefits
     .map((benefit, index) => ({ benefit, index }))
-    .sort((x, y) => effectiveRate(y.benefit) - effectiveRate(x.benefit) || x.index - y.index);
+    .sort((x, y) => effectiveRateOf(y.benefit) - effectiveRateOf(x.benefit) || x.index - y.index);
 
   return [...rule.tiers]
     .sort((a, b) => a.min - b.min)
@@ -302,7 +307,7 @@ export function attainableByTier(
           cappedBy = 'total';
         }
 
-        const plan = planFor(benefit, rule, avail, ceilingOfDiscount);
+        const plan = benefitPlanFor(benefit, rule, avail, ceilingOfDiscount);
         /*
          * 한도가 이미 0으로 소진됐다면 그 한도가 사유다. 여기까지 왔다는 것은 혜택별 한도가
          * 0이 아니라는 뜻이므로(위에서 tierLocked로 걸렀다), 0인 쪽은 공동·통합 한도다.

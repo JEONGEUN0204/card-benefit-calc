@@ -57,5 +57,16 @@ export { attainableByTier } from './attainable.js';
 export type { AttainableBenefit, AttainableLimit, SpendCeilings, TierAttainable } from './attainable.js';
 export { steadyStateFor } from './steady.js';
 export { peakingCurve } from './peaking.js';
+export { allocate } from './allocate.js';
+export type {
+  AllocateInput,
+  Allocation,
+  AllocationWarning,
+  AllocationWarningKind,
+  CardConstraint,
+  CardPlan,
+  PoolAssignment,
+} from './allocate.js';
+export { REST_POOL, poolsForBenefit, spendPools } from './scope.js';
 export type { PeakingPoint } from './peaking.js';
 export type { SteadyOptions, SteadyState, SteadyTierRow } from './steady.js';

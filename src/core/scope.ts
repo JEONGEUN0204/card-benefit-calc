@@ -35,6 +35,19 @@ export interface ScopeGroup {
   members: ScopeMember[];
 }
 
+/**
+ * "나머지 결제" 풀의 키.
+ *
+ * 고른 카드의 어떤 혜택도 가리키지 않는 평범한 지출이다. 할인은 전 가맹점 혜택이 있는
+ * 카드에서만 붙지만, **실적은 어느 카드에서나 쌓인다** — 그래서 이 통이 꼭 있어야 한다.
+ * 팟 카드로 40만원을 쓸 때 할인 대상은 15~20만원뿐이고 나머지는 할인 0원으로 구간을 여는
+ * 돈이다. 이 통이 없으면 배분기가 한계 할인율만 보고 그 카드에 한 푼도 주지 않아 상위
+ * 구간을 영원히 열지 못한다.
+ *
+ * 그룹 키는 `c:`·`m:`·`o:` 접두를 달거나 `all`이므로 이 키와 부딫치지 않는다.
+ */
+export const REST_POOL = 'rest';
+
 /** 가맹점명 비교용 정규화. `match.ts`의 기준과 같아야 한다. */
 function normalizeMerchant(s: string): string {
   return s.toLowerCase().replace(/\s+/g, '');
@@ -189,4 +202,33 @@ export function scopeKeyOf(
     }
   }
   return null;
+}
+
+/**
+ * 돈을 담는 통의 목록. 서로 겹치지 않으며 한 결제는 정확히 한 통에 들어간다.
+ *
+ * 구체 풀(카테고리·가맹점·해외로 좁혀진 것)에 "나머지 결제"를 더한 것이다. 조건이 없는
+ * 전 가맹점 그룹(`ALL_SCOPE`)은 통이 아니다 — 그 혜택은 모든 통에서 벌기 때문에 돈을
+ * 따로 담을 필요가 없고, 담으면 같은 돈이 두 번 세어진다.
+ */
+export function spendPools(groups: readonly ScopeGroup[]): string[] {
+  const specific = groups.filter((g) => g.key !== ALL_SCOPE).map((g) => g.key);
+  return [...specific, REST_POOL];
+}
+
+/**
+ * 이 혜택이 돈을 끌어올 수 있는 통들.
+ *
+ * 구체 혜택은 자기 통 하나뿐이다. 조건이 없는 전 가맹점 혜택은 **모든 통**에서 번다 —
+ * 다른 카드를 위해 만들어진 통의 돈이라도 이 카드로 결제하면 1%가 붙기 때문이고, 배분기가
+ * 그 선택을 할 수 있어야 한다.
+ */
+export function poolsForBenefit(
+  groups: readonly ScopeGroup[],
+  cardId: string,
+  benefitId: string,
+): string[] {
+  const key = scopeKeyOf(groups, cardId, benefitId);
+  if (key === null) return [];
+  return key === ALL_SCOPE ? spendPools(groups) : [key];
 }

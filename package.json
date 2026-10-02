@@ -14,7 +14,8 @@
     "typecheck": "tsc --noEmit && tsc --noEmit -p src/app",
     "sim": "tsx scripts/sim.ts",
     "import": "tsx scripts/import.ts",
-    "roster": "tsx scripts/roster.ts"
+    "roster": "tsx scripts/roster.ts",
+    "plan": "tsx scripts/plan.ts"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
