@@ -13,7 +13,8 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit && tsc --noEmit -p src/app",
     "sim": "tsx scripts/sim.ts",
-    "import": "tsx scripts/import.ts"
+    "import": "tsx scripts/import.ts",
+    "roster": "tsx scripts/roster.ts"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",

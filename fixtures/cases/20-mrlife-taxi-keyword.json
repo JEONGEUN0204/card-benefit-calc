@@ -1,0 +1,82 @@
+{
+  "id": "20-mrlife-taxi-keyword",
+  "description": "Night TIME 택시 혜택의 가맹점 키워드가 엉뚱한 결제를 잡지 않는지 못 박는다. 처음에 우버-카카오 합작 택시를 \"UT\"로 적었는데 가맹점명 비교가 부분일치라 \"YOUTUBE\"·\"OUTBACK\"·\"OUTLET\"에 모두 걸렸고, 이 혜택이 time 공동 한도를 쓰므로 엉뚱한 결제가 다른 TIME 혜택의 한도까지 잠식했다. 전월 500,000 → 500,000 구간이라 night-taxi 한도 20,000, time 그룹 한도 20,000. x1 카카오T 20,000×10%=2,000 → 건당 한도 1,000으로 잘림. x2 YOUTUBE PREMIUM과 x3 우버이츠는 어느 혜택에도 걸리지 않아야 한다 (night-food는 restaurant·cafe만 보고, culture·delivery를 덮는 혜택이 없다). x4 서울개인택시 50,000×10%=5,000 → 건당 한도 1,000. 날짜가 달라 일 1회 제한에 걸리지 않는다. 합 2,000원. 전 혜택 excludeFromSpending이 none이고 실적 제외 목록(giftCard·연회비 등)에 걸리는 것이 없어 결제액 125,000이 전액 실적이다.",
+  "card": "shinhan-toss-mrlife",
+  "initialPrevSpending": 500000,
+  "transactions": [
+    {
+      "id": "x1",
+      "date": "2026-01-05",
+      "amount": 20000,
+      "merchant": "카카오T",
+      "category": "transport",
+      "time": "22:00"
+    },
+    {
+      "id": "x2",
+      "date": "2026-01-06",
+      "amount": 30000,
+      "merchant": "YOUTUBE PREMIUM",
+      "category": "culture",
+      "time": "22:00"
+    },
+    {
+      "id": "x3",
+      "date": "2026-01-07",
+      "amount": 25000,
+      "merchant": "우버이츠",
+      "category": "delivery",
+      "time": "22:00"
+    },
+    {
+      "id": "x4",
+      "date": "2026-01-08",
+      "amount": 50000,
+      "merchant": "서울개인택시",
+      "category": "transport",
+      "time": "22:00"
+    }
+  ],
+  "expect": {
+    "months": [
+      {
+        "month": "2026-01",
+        "tierMin": 500000,
+        "prevSpending": 500000,
+        "rebate": 0,
+        "totalDiscount": 2000,
+        "countedSpending": 125000,
+        "transactions": {
+          "x1": {
+            "discount": 1000,
+            "reason": "ok",
+            "cappedBy": "perTransaction",
+            "appliedBenefitId": "night-taxi",
+            "countedSpending": 20000
+          },
+          "x2": {
+            "discount": 0,
+            "reason": "noMatch",
+            "cappedBy": null,
+            "appliedBenefitId": null,
+            "countedSpending": 30000
+          },
+          "x3": {
+            "discount": 0,
+            "reason": "noMatch",
+            "cappedBy": null,
+            "appliedBenefitId": null,
+            "countedSpending": 25000
+          },
+          "x4": {
+            "discount": 1000,
+            "reason": "ok",
+            "cappedBy": "perTransaction",
+            "appliedBenefitId": "night-taxi",
+            "countedSpending": 50000
+          }
+        }
+      }
+    ]
+  }
+}
