@@ -8,7 +8,7 @@
     />
     <meta
       name="description"
-      content="순할인은 할인받은 결제가 다음 달 전월실적에서 빠지는 것까지 계산해, 신용카드로 실제로 남는 할인액을 알려줍니다. 명세서는 브라우저를 나가지 않습니다."
+      content="순할인은 가진 신용카드에 월 지출을 어떻게 나눠 써야 가장 많이 받는지 계산합니다. 구간 문턱과 횟수 제한, 할인받은 결제의 실적 제외까지 반영하고 연회비를 뺀 금액을 알려줍니다."
     />
     <meta name="color-scheme" content="light dark" />
     <meta name="theme-color" content="#f4f5f6" media="(prefers-color-scheme: light)" />
@@ -19,7 +19,7 @@
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230b8a68' stroke-width='2' stroke-linecap='round'%3E%3Crect x='2' y='5' width='20' height='14' rx='3'/%3E%3Cpath d='M2 10h20'/%3E%3Cpath d='M6 15h4'/%3E%3C/svg%3E"
     />
     <link rel="stylesheet" href="/src/landing/landing.css" />
-    <title>순할인 — 전월실적에서 빠지는 것까지 계산한 실제 카드 할인액</title>
+    <title>순할인 — 가진 카드에 월 지출을 어떻게 나눠 쓸까</title>
   </head>
   <body>
     <a class="skip" href="#main">본문으로 건너뛰기</a>
@@ -48,228 +48,238 @@
     <main id="main">
       <section class="wrap hero">
         <div class="hero-text">
-          <h1><span class="keep">“월 최대 15,000원 할인”은</span> 상한이지, 받게 될 금액이 아닙니다.</h1>
+          <h1><span class="keep">“월 최대 40,000원 할인”은</span> 상한이지, 받게 될 금액이 아닙니다.</h1>
           <p class="lede">
-            할인받은 결제는 다음 달 <strong>전월실적에서 빠집니다.</strong> 구간이 내려가면
-            그다음 달 할인은 0원이 됩니다. 순할인은 이 고리를 달마다 이어 계산해, 이 카드로
-            실제로 남는 금액을 알려줍니다.
+            한도를 채우려면 그 업종에 그만큼 써야 하고, 할인받은 결제는 다음 달
+            <strong>전월실적에서 빠집니다.</strong> 순할인은 가진 카드에 월 지출을 어떻게
+            나눠 써야 가장 많이 받는지 계산해, 연회비까지 뺀 금액을 알려줍니다.
           </p>
           <p class="cta-row">
-            <a class="btn" href="app/">내 명세서로 계산하기</a>
-            <a class="btn btn-ghost" href="#ledger">예시를 달마다 풀어 보기</a>
+            <a class="btn" href="app/">내 지출로 계산하기</a>
+            <a class="btn btn-ghost" href="#compare">한 장만 쓸 때와 견주기</a>
           </p>
           <p class="note">
-            카드사 명세서 파일을 끌어다 놓으면 됩니다. 회원가입도, 카드사 로그인도, 업로드도
-            없습니다.
+            명세서를 올리지 않습니다. 고른 카드의 혜택이 가리키는 항목만 물어봅니다.
           </p>
         </div>
 
         <!--
-          계산기 할인 결과의 순액 원장과 같은 뺄셈, 같은 줄 이름이다. 숫자는 골든 케이스
-          07-three-month(가상 카드 simple-cafe)를 `npm run sim`으로 돌린 값이고,
-          src/app/__tests__/summary.test.ts가 같은 값을 못 박아 둔다.
+          계산기 3단계의 순액 원장과 같은 뺄셈, 같은 줄 이름이다. 숫자는 부산은행 팟 카드와
+          카드의정석 EVERY 1에 월 100만원을 나눠 쓴 배분이고, `npm run plan`으로 돌린 값이다.
+          src/app/__tests__/landing.test.ts가 같은 값을 못 박아 둔다 — 소개 페이지는 계산하지
+          않으므로, 엔진이 바뀌면 그 테스트가 여기도 고치라고 알린다.
         -->
         <figure class="net">
-          <figcaption>아래 예시 카드로 석 달을 쓰면</figcaption>
+          <figcaption>팟 카드와 EVERY 1에 월 100만원을 나눠 쓰면</figcaption>
           <dl class="net-ledger">
             <div class="net-row">
-              <dt>안내문대로라면 3개월 최대</dt>
-              <dd class="money nominal">45,000원</dd>
+              <dt>한 해 받는 혜택<small>월 31,000원 × 12개월</small></dt>
+              <dd class="money">372,000원</dd>
             </div>
             <div class="net-row loss">
-              <dt>구간이 낮아 잃은 몫<small>1월과 3월은 전월실적 미달</small></dt>
-              <dd class="money">−30,000원</dd>
-            </div>
-            <div class="net-row loss">
-              <dt>열린 한도를 다 못 쓴 몫<small>2월, 한도 15,000원 중</small></dt>
-              <dd class="money">−4,500원</dd>
+              <dt>연회비<small>두 장 합쳐서</small></dt>
+              <dd class="money">−22,000원</dd>
             </div>
             <div class="net-row result">
-              <dt>순할인</dt>
-              <dd class="money">10,500원</dd>
+              <dt>한 해 남는 금액</dt>
+              <dd class="money">350,000원</dd>
             </div>
           </dl>
         </figure>
       </section>
 
-      <section class="wrap section" id="ledger">
-        <h2>3개월을 이어 계산하면 이렇게 됩니다</h2>
+      <section class="wrap section" id="compare">
+        <h2>한 장에 몰아 쓰면 그만큼 손해입니다</h2>
         <p class="sect-lede">
-          카페 할인 카드 한 장, 3개월 사용내역. 2월에 10,500원을 받은 대가로 3월 할인이
-          0원이 됩니다. 할인받은 116,000원이 2월 실적에서 통째로 빠졌기 때문입니다.
+          같은 월 100만원, 같은 지출입니다. 어느 카드에 얼마를 나눠 쓰느냐만 다릅니다.
+          연회비를 이미 뺀 금액입니다.
         </p>
 
-        <ol class="ledger">
-          <li class="month">
-            <p class="month-head">
-              <span class="month-name">2026년 1월</span>
-              <span class="chip chip-muted">첫 달, 전월실적 모름</span>
-            </p>
-            <dl class="rows">
-              <div class="row"><dt>전월실적</dt><dd class="dim">알 수 없음</dd></div>
-              <div class="row"><dt>혜택 한도</dt><dd class="dim">없음</dd></div>
-              <div class="row"><dt>카드 사용</dt><dd class="money">430,000원</dd></div>
-              <div class="row"><dt>실적에서 제외</dt><dd class="money dim">0원</dd></div>
-              <div class="row row-total"><dt>이 달 할인</dt><dd class="money strong">0원</dd></div>
-              <div class="row row-total"><dt>이 달 실적</dt><dd class="money strong">430,000원</dd></div>
-            </dl>
-            <p class="carry">30만원을 넘겨 2월 혜택이 열립니다</p>
-          </li>
+        <dl class="rows">
+          <div class="row row-total">
+            <dt><b>팟 카드 40만원 + EVERY 1 60만원</b></dt>
+            <dd class="money mark">연 350,000원</dd>
+          </div>
+          <div class="row">
+            <dt>팟 카드 한 장에 100만원</dt>
+            <dd class="money">연 266,000원</dd>
+          </div>
+          <div class="row">
+            <dt>EVERY 1 한 장에 100만원</dt>
+            <dd class="money">연 144,000원</dd>
+          </div>
+        </dl>
 
-          <li class="month">
-            <p class="month-head">
-              <span class="month-name">2026년 2월</span>
-              <span class="chip chip-mark">30만원 이상 구간</span>
-            </p>
-            <dl class="rows">
-              <div class="row"><dt>전월실적</dt><dd class="money">430,000원</dd></div>
-              <div class="row"><dt>혜택 한도</dt><dd>카페 1만, 편의점 5천</dd></div>
-              <div class="row"><dt>카드 사용</dt><dd class="money">316,000원</dd></div>
-              <div class="row"><dt>실적에서 제외</dt><dd class="money warn">−116,000원</dd></div>
-              <div class="row row-total"><dt>이 달 할인</dt><dd class="money strong mark">10,500원</dd></div>
-              <div class="row row-total"><dt>이 달 실적</dt><dd class="money strong">200,000원</dd></div>
-            </dl>
-            <p class="carry carry-warn">30만원에 100,000원 모자라 3월 혜택이 닫힙니다</p>
-          </li>
-
-          <li class="month">
-            <p class="month-head">
-              <span class="month-name">2026년 3월</span>
-              <span class="chip chip-error">실적 미달</span>
-            </p>
-            <dl class="rows">
-              <div class="row"><dt>전월실적</dt><dd class="money">200,000원</dd></div>
-              <div class="row"><dt>혜택 한도</dt><dd class="dim">없음</dd></div>
-              <div class="row"><dt>카드 사용</dt><dd class="money">150,000원</dd></div>
-              <div class="row"><dt>실적에서 제외</dt><dd class="money dim">0원</dd></div>
-              <div class="row row-total"><dt>이 달 할인</dt><dd class="money strong">0원</dd></div>
-              <div class="row row-total"><dt>이 달 실적</dt><dd class="money strong">150,000원</dd></div>
-            </dl>
-            <p class="carry">카페에서 50,000원을 썼지만 구간이 닫혀 0원입니다</p>
-          </li>
-        </ol>
-
-        <p class="fineprint">
-          예시 카드는 <code>fixtures/testcards/simple-cafe.json</code>의 가상 카드이고, 위 숫자는
-          손으로 계산해 고정해 둔 골든 케이스를 계산 엔진이 그대로 재현한 값입니다. 실제
-          판매 중인 카드가 아닙니다.
+        <p class="example">
+          팟 카드는 40만원만 쓰면 통합 한도 20,000원이 다 찹니다. 더 써도 80만원 구간까지는
+          한도가 늘지 않으니, 남는 돈은 1% 적립과 월정액이 붙는 EVERY 1로 옮기는 편이
+          낫습니다. 이 판단을 하려면 두 카드의 구간과 한도를 함께 봐야 합니다.
         </p>
       </section>
 
-      <section class="wrap section">
-        <h2>30만원 구간은 30만원으로 채워지지 않습니다</h2>
+      <section class="wrap section" id="marginal">
+        <h2>다음 1만원은 어느 카드로 긁어야 하나</h2>
         <p class="sect-lede">
-          쓴 만큼 실적이 쌓이다가, 할인받은 건이 빠져나갑니다. 목표 구간에 실제로 도달하려면
-          빠져나갈 몫까지 더 써야 합니다. 순할인은 그 금액을 역산합니다.
+          카드를 갈아타는 지점을 정하는 것은 평균이 아니라 <b>한계</b>입니다. 다음 1원이
+          얼마를 받는지가 기준입니다.
         </p>
 
-        <figure class="split">
-          <figcaption class="split-head">
-            <span>30만원 구간을 채우려면 필요한 결제액</span>
-            <b class="money">371,000원</b>
-          </figcaption>
-          <div class="split-bar">
-            <span class="split-kept">
-              <i>실적으로 남는 몫</i>
-              <b class="money">300,000원</b>
-            </span>
-            <span class="split-out">
-              <i>할인받아 빠지는 몫</i>
-              <b class="money">71,000원</b>
-            </span>
+        <dl class="rows">
+          <div class="row">
+            <dt>EVERY 1에 월 50만원<small>1% 적립 5,000원 + 구간 월정액 5,000원</small></dt>
+            <dd class="money">평균 2.00%</dd>
           </div>
-          <p class="split-note">
-            이때 받는 할인은 6,500원입니다. 카페·편의점·마트·교통·배달·기타 비중을 바꾸면
-            필요 결제액도 함께 바뀝니다.
-          </p>
-        </figure>
+          <div class="row row-total">
+            <dt><b>그다음 1원부터</b><small>월정액은 이미 받았으니 1%만 남습니다</small></dt>
+            <dd class="money warn">한계 1.00%</dd>
+          </div>
+        </dl>
+
+        <p class="example">
+          월 60만원을 쓰면 평균은 1.83%로 여전히 높아 보이지만, 50만원을 넘긴 10만원은
+          1%밖에 받지 못합니다. 그 10만원을 5%가 나오는 카드로 옮기면 그만큼 더 받습니다.
+          평균만 보면 이 사실이 보이지 않습니다.
+        </p>
+      </section>
+
+      <section class="wrap section" id="attainable">
+        <h2>“월 최대 40,000원”을 다 받는 사람은 드뭅니다</h2>
+        <p class="sect-lede">
+          한도는 상한일 뿐입니다. 횟수 제한과 건당 최소금액이 걸려 있고, 무엇보다 그 업종에
+          한도만큼 쓰지 않습니다.
+        </p>
+
+        <dl class="rows">
+          <div class="row">
+            <dt>안내문이 말하는 80만원 구간 월 최대</dt>
+            <dd class="money nominal">40,000원</dd>
+          </div>
+          <div class="row row-total">
+            <dt><b>간편결제·배달·편의점·구독에 쓰는 돈으로 실제 채울 수 있는 몫</b></dt>
+            <dd class="money mark">23,000원</dd>
+          </div>
+        </dl>
+
+        <p class="example">
+          그래서 80만원 구간을 여는 대신 40만원만 맞추고 나머지를 다른 카드로 돌리는 편이
+          낫습니다. 순할인은 카드 규칙의 횟수 제한·건당 조건까지 보고 두 숫자를 나란히
+          보여줍니다.
+        </p>
+      </section>
+
+      <section class="wrap section" id="carry">
+        <h2>40만원 구간은 40만원으로 채워지지 않습니다</h2>
+        <p class="sect-lede">
+          할인받은 결제를 다음 달 실적에서 빼는 카드가 많습니다. 그러면 같은 구간을 지키는
+          데 더 많은 돈이 듭니다.
+        </p>
+
+        <dl class="rows">
+          <div class="row">
+            <dt>토스 삼성카드로 쓴 금액</dt>
+            <dd class="money">300,000원</dd>
+          </div>
+          <div class="row">
+            <dt>그 달 받은 할인</dt>
+            <dd class="money mark">10,000원</dd>
+          </div>
+          <div class="row">
+            <dt>할인받아 실적에서 빠진 몫</dt>
+            <dd class="money warn">−100,000원</dd>
+          </div>
+          <div class="row row-total">
+            <dt><b>다음 달 구간을 정하는 실적</b></dt>
+            <dd class="money">200,000원</dd>
+          </div>
+        </dl>
+
+        <p class="example">
+          카드마다 다릅니다. 카드의정석 EVERY 1과 팟 카드는 할인받은 결제도 실적에 남아
+          쓴 만큼이 그대로 실적이 됩니다. 순할인은 카드별로 이 줄을 따로 적습니다.
+        </p>
       </section>
 
       <section class="wrap section">
         <h2>세 가지에 답합니다</h2>
-        <ul class="answers">
+        <ol class="answers">
           <li>
-            <h3>이 카드, 한 달에 최대 얼마까지</h3>
+            <h3>어느 카드로 무엇을 얼마씩</h3>
             <p>
-              전월실적 구간별로 계산합니다. 혜택별 월 한도를 단순히 더한 값이 아니라, 통합
-              한도에 잘린 뒤의 금액입니다.
+              항목마다 한 달에 얼마까지 쓸 수 있는지 적으면, 카드별로 무엇을 얼마씩 몇 건에
+              나눠 결제하면 되는지 표로 내놓습니다. 매달 들고 다니며 보라고 CSV로도
+              내려받습니다.
             </p>
-            <p class="example">
-              예: 혜택 한도를 다 더하면 27,000원이지만 통합 한도 때문에 20,000원에서 멈추는
-              카드를 그렇게 표시합니다.
-            </p>
+            <p class="example">예: 구독 15,000원을 팟 카드로 한 건</p>
           </li>
           <li>
-            <h3>목표 구간을 채우려면 얼마를</h3>
+            <h3>다음 1만원은 어느 카드로</h3>
             <p>
-              할인받은 만큼 실적에서 빠지므로 목표액보다 더 써야 합니다. 그 차이를 역산해
-              필요 결제액과 그때 받는 할인을 함께 보여줍니다.
+              구간 문턱과 한도를 모두 보고 한계 피킹률이 가장 높은 곳에 배정합니다. 할인이
+              0원이어도 구간을 여는 돈은 그 가치만큼 셉니다.
             </p>
-            <p class="example">예: 30만원 구간을 채우려면 371,000원을 써야 합니다.</p>
+            <p class="example">예: 팟 40만원 중 20만원은 할인 0원, 구간을 여는 돈</p>
           </li>
           <li>
-            <h3>내 명세서라면 실제로 얼마를</h3>
+            <h3>연회비까지 빼면 한 해에 얼마</h3>
             <p>
-              결제 시간순으로 한도를 소진하고, 달마다 구간을 다시 판정해 이어 계산합니다.
-              실제 카드사가 승인 순서대로 한도를 쓰는 방식과 같습니다.
+              카드 조합을 바꿔 가며 한 해에 얼마가 남는지 견줍니다. 연회비가 더 큰 카드는
+              쓰지 않는 쪽을 권합니다.
             </p>
-            <p class="example">예: 위 3개월 원장이 이 계산의 결과입니다.</p>
+            <p class="example">예: 둘 다 350,000원 / 팟만 266,000원</p>
           </li>
-        </ul>
+        </ol>
       </section>
 
       <section class="wrap section">
         <h2>약관의 어디까지 따르는가</h2>
         <div class="two-col">
-          <ul class="checks">
-            <li>건당 최소 결제금액 — “3만원 이상 결제 시”</li>
-            <li>건당 최대 할인액</li>
-            <li>혜택별 월 할인 한도 — 구간마다 다른 값</li>
-            <li>여러 혜택에 함께 걸리는 통합 월 한도</li>
-            <li>월·일 단위 사용 횟수 제한</li>
-            <li>10원 단위 절사 같은 할인액 절사 규칙</li>
-            <li>실적 제외 항목 — 업종, 가맹점, 할부 같은 결제유형</li>
-            <li>할인받은 건의 전액 제외 / 할인액만 제외 / 제외 없음</li>
-          </ul>
-
-          <div class="reasons">
-            <h3>그리고 한 건마다 이유를 답니다</h3>
-            <p>
-              “왜 이 결제는 할인이 안 됐나”가 이 도구의 주요 출력입니다. 건별로 다음 중
-              하나가 붙습니다.
+          <div>
+            <ul class="checks">
+              <li>전월실적 구간별 할인율과 한도</li>
+              <li>혜택별 한도 · 여럿이 나눠 쓰는 공동 한도 · 카드 전체 통합 한도</li>
+              <li>건당 최소금액과 건당 최대 할인액</li>
+              <li>월 횟수와 일 횟수 제한 (두 겹으로 걸린 것도)</li>
+              <li>요일 조건 (주말 할인)</li>
+              <li>“넷 중 택1” 선택지와 “중복 적용 가능” 혜택</li>
+              <li>해외 결제와 국내 전용 조건</li>
+              <li>할인받은 결제의 실적 제외 (전액 · 할인액만 · 제외 없음)</li>
+              <li>실적에서 빠지는 항목 (세금 · 공과금 · 상품권 · 무이자할부)</li>
+              <li>구간에 붙는 월정액 할인</li>
+              <li>10원 미만 절사 같은 절사 방식</li>
+            </ul>
+          </div>
+          <div>
+            <h3>그리고 왜 그 금액인지 답합니다</h3>
+            <p class="sect-lede">
+              배분한 금액은 실제 카드사처럼 결제 시간순으로 한도를 소진해 다시 계산한 값입니다.
+              최적화는 제안일 뿐이고, 화면의 숫자는 그 제안을 실행했을 때 받는 액수입니다.
             </p>
             <ul class="tags">
-              <li>해당 혜택 없음</li>
-              <li>건당 최소금액 미달</li>
-              <li>혜택 월 한도 소진</li>
-              <li>통합 한도 소진</li>
-              <li>횟수 제한 초과</li>
-              <li>절사 후 0원</li>
-              <li>실적 구간 미달</li>
-              <li>한도에 일부만 잘림</li>
+              <li class="chip chip-mark">혜택 한도에 잘림</li>
+              <li class="chip chip-mark">공동 한도 소진</li>
+              <li class="chip chip-muted">횟수 제한 초과</li>
+              <li class="chip chip-muted">건당 최소금액 미달</li>
+              <li class="chip chip-error">실적 구간 미달</li>
             </ul>
+            <p class="fineprint">
+              승인시간 조건이 걸린 혜택(밤 9시 이후 할인 같은 것)은 처방에 넣지 않습니다.
+              명세서에도 가상 거래에도 승인시간이 없어, 짐작으로 붙이면 밤에 쓰지 않은 결제가
+              할인으로 잡히기 때문입니다.
+            </p>
           </div>
         </div>
       </section>
 
       <section class="wrap section">
-        <h2>명세서는 이 브라우저를 나가지 않습니다</h2>
+        <h2>아무것도 이 브라우저를 나가지 않습니다</h2>
         <p class="sect-lede">
-          결제내역은 한 사람의 생활 기록입니다. 그래서 파일을 읽는 일, 업종을 분류하는 일,
-          할인을 계산하는 일을 전부 이 탭 안에서 합니다. 서버로 보내지 않는 것이 아니라,
-          보낼 서버가 없습니다.
+          계산은 전부 이 탭 안에서 끝납니다. 회원가입도, 카드사 로그인도, 업로드도 없습니다.
         </p>
         <ul class="checks">
-          <li>
-            배포본에는 <code>connect-src 'none'</code> CSP가 들어 있어 페이지가 네트워크 요청
-            자체를 보내지 못합니다. 나중에 누가 분석 스크립트를 붙여도 막힙니다.
-          </li>
-          <li>
-            이 브라우저에 남는 것은 직접 고친 업종 규칙과 마지막으로 고른 카드뿐입니다. 거래
-            내역은 탭을 닫으면 사라집니다.
-          </li>
-          <li>결과를 CSV로 내려받을 때도 이 탭 안에서 파일을 만듭니다.</li>
-          <li>계정이 없습니다. 이메일도, 카드사 로그인도 받지 않습니다.</li>
+          <li>적어 주신 월 예산과 항목별 지출 상한은 이 브라우저에만 남습니다</li>
+          <li>빌드된 페이지는 바깥으로 요청을 보낼 수단 자체가 막혀 있습니다</li>
+          <li>저장한 값은 아무 때나 지울 수 있습니다</li>
+          <li>카드 규칙과 글꼴까지 함께 실어 외부에서 받아 오는 것이 없습니다</li>
         </ul>
       </section>
 
@@ -277,36 +287,26 @@
         <h2>쓰는 순서</h2>
         <ol class="steps">
           <li>
-            <h3>계산할 카드를 고릅니다</h3>
+            <h3>카드를 고릅니다</h3>
+            <p>지금 가진 카드와 새로 견줄 카드를 함께 고릅니다. 세 장까지 권합니다.</p>
+          </li>
+          <li>
+            <h3>지출을 적습니다</h3>
             <p>
-              고른 카드의 구간별 월 최대 할인표가 바로 나옵니다. 계산할 수 있는 카드는 목록에
-              실린 것뿐입니다 — 약관을 숫자로 옮기고 손으로 계산한 기대값으로 검증하는 일을
-              거친 카드만 목록에 올립니다.
+              고른 카드의 혜택이 가리키는 항목만 물어봅니다. 평균이 아니라 한 달에 얼마까지
+              쓸 수 있는지를 적습니다.
             </p>
           </li>
           <li>
-            <h3>명세서 파일을 끌어다 놓습니다</h3>
+            <h3>배분 처방을 봅니다</h3>
             <p>
-              카드사 홈페이지에서 내려받은 이용대금명세서(CSV·엑셀)를 그대로 넣습니다. 여러
-              달을 한꺼번에 넣으면 겹친 거래를 걸러 이어 붙입니다. 명세서가 없으면 가상 샘플로
-              먼저 볼 수 있습니다.
+              어느 카드로 무엇을 얼마씩 몇 건에 결제하면 되는지, 연회비까지 뺀 금액과 함께
+              나옵니다.
             </p>
           </li>
           <li>
-            <h3>달마다 무엇을 받고 무엇을 놓쳤는지 봅니다</h3>
-            <p>
-              건별 할인과 그 사유를 함께 적습니다. 가맹점명을 업종으로 매핑하는 기본 규칙은
-              반드시 몇 개 틀리므로, 어디에도 안 걸린 가맹점은 <code>미분류</code>로 남겨 이
-              화면에서 고치게 합니다. 직접 고친 규칙은 다음에도 적용되고, 결과는 CSV로
-              내려받을 수 있습니다.
-            </p>
-          </li>
-          <li>
-            <h3>목표 구간에 얼마가 필요한지 역산합니다</h3>
-            <p>
-              할인받은 건이 실적에서 빠지는 것까지 감안해, 다음 달 구간을 채우려면 실제로 얼마를
-              써야 하는지 계산합니다. 명세서가 없어도 볼 수 있습니다.
-            </p>
+            <h3>구성을 견줍니다</h3>
+            <p>카드 조합을 바꿔 가며 한 해에 얼마가 남는지 봅니다.</p>
           </li>
         </ol>
       </section>
@@ -321,37 +321,40 @@
             <dt>계산 엔진</dt>
             <dd>
               순수 함수로 분리되어 있고, 손으로 계산한 골든 케이스로 검증합니다. 같은 입력이면
-              언제나 같은 숫자가 나옵니다.
+              언제나 같은 숫자가 나옵니다. 배분이 최적인지도 함께 알려줍니다 — 더 나은 배분이
+              없으면 그렇게 적습니다.
             </dd>
           </div>
           <div>
             <dt>카드 규칙</dt>
             <dd>
-              지금 실려 있는 카드는 <b>토스 삼성카드, 카드의정석 EVERY 1, KB국민 NEED Pay, 세 장</b>입니다. 카드사의 혜택 안내
-              페이지를 읽어 옮긴 것이라 상품설명서에만 있는 조건은 빠져 있을 수 있습니다.
-              계산 구조를 검증하는 가상 카드 두 장은 골든 케이스 전용으로 따로 둡니다.
+              지금 실려 있는 카드는 <b>부산은행 팟 카드, 토스 삼성카드, 카드의정석 EVERY 1,
+              KB국민 NEED Pay, 삼성 iD SELECT ALL, 토스 신한카드 Mr.Life, 여섯 장</b>입니다.
+              카드사의 혜택 안내 페이지를 읽어 옮긴 것이라 상품설명서에만 있는 조건은 빠져
+              있을 수 있습니다.
             </dd>
           </div>
           <div>
-            <dt>명세서 포맷</dt>
+            <dt>매달 같은 방식으로 쓴다고 봅니다</dt>
             <dd>
-              신한·KB국민·삼성·우리카드와 일반 포맷을 읽습니다. 이 가운데 실제 명세서로 확인한
-              것은 우리카드뿐이고, 나머지는 컬럼명 추정 위에 있습니다.
+              지출이 들쭉날쭉한 달에는 전월실적이 모자라 구간이 깨질 수 있습니다. 구간 문턱에
+              딱 맞추지 말고 여유를 두세요.
             </dd>
           </div>
           <div>
             <dt>아직 없는 것</dt>
             <dd>
-              카드를 직접 추가하는 길이 없습니다. 약관을 규칙으로 옮기는 일은 아직 사람 손을
-              거치므로, 찾는 카드가 목록에 없으면 실릴 때까지 기다려야 합니다.
+              목록에 없는 카드와는 견줄 수 없습니다. 가진 카드의 배분까지 답하고, 어떤 카드를
+              새로 만들지는 답하지 않습니다. 약관을 규칙으로 옮기는 일이 아직 사람 손을 거치기
+              때문입니다.
             </dd>
           </div>
         </dl>
       </section>
 
       <section class="wrap closing">
-        <h2>명세서 한 장으로 확인해 보세요</h2>
-        <p>파일은 이 브라우저를 나가지 않습니다.</p>
+        <h2>가진 카드를 어떻게 나눠 쓸지 확인해 보세요</h2>
+        <p>명세서도, 회원가입도 필요 없습니다.</p>
         <p class="cta-row">
           <a class="btn" href="app/">계산기 열기</a>
         </p>

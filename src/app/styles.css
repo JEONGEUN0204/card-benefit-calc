@@ -393,13 +393,15 @@ p {
 
 .step-dots {
   display: flex;
-  gap: 7px;
+  /* 점은 9px이지만 누르는 넓이는 25px이다(아래 ::after). 겹치지 않게 간격을 그만큼 둔다. */
+  gap: 16px;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
 .step-dots button {
+  position: relative;
   display: block;
   width: 9px;
   height: 9px;
@@ -407,7 +409,20 @@ p {
   border: 1px solid var(--line-strong);
   border-radius: 999px;
   background: var(--surface);
+  touch-action: manipulation;
   transition: width 0.15s, background 0.12s, border-color 0.12s;
+}
+
+/*
+ * 누를 수 있는 넓이를 25px로 넓힌다. 점을 9px보다 크게 그리면 단계 막대가 무거워지는데,
+ * 9px짜리 과녁은 손가락으로 거의 맞출 수 없다(접근성 기준은 24px). 그래서 그림은 그대로
+ * 두고 과녁만 넓힌다.
+ */
+.step-dots button::after {
+  content: '';
+  position: absolute;
+  inset: -8px;
+  border-radius: 999px;
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -1703,4 +1718,159 @@ details.warn summary {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* ───────────────────────────────────────────────────────────────────────────
+ * 1단계 — 카드 고르기 (여러 장)
+ *
+ * 한 장을 고르던 드롭다운(ARIA combobox)을 발급사별 체크박스 목록으로 바꿨다. 여러 장을
+ * 고르는 일에는 열고 닫는 칸이 맞지 않는다 — 고른 것을 보면서 더 고르게 되기 때문이다.
+ * ─────────────────────────────────────────────────────────────────────────── */
+.pick-group {
+  margin-top: 14px;
+}
+
+.pick-list {
+  display: grid;
+  gap: 1px;
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+/*
+ * 칸 사이 선은 테두리가 아니라 1px 간격으로 낸다. 테두리로 그으면 좁은 화면에서 줄이
+ * 접힐 때 둘째 줄 첫 칸에 선이 남는다.
+ */
+.pick {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.pick.on {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.pick input {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent);
+}
+
+.pick-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-weight: 600;
+}
+
+.pick-fee {
+  flex: none;
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .pick:hover {
+    border-color: var(--accent-line);
+  }
+}
+
+.pick:active {
+  background: var(--surface-sunken);
+}
+
+/* 고른 카드마다 서는 판. 괘선으로만 나누고 상자에 넣지 않는다. */
+.picked {
+  margin-top: 26px;
+}
+
+/* ───────────────────────────────────────────────────────────────────────────
+ * 2단계 — 지출 적기
+ *
+ * 질문 하나가 한 줄이다. 왼쪽에 "무엇을 묻는가"와 "왜 묻는가", 오른쪽에 금액 칸.
+ * ─────────────────────────────────────────────────────────────────────────── */
+.qlist {
+  display: grid;
+  gap: 0;
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.qrow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: start;
+  justify-content: space-between;
+  gap: 8px 18px;
+  padding: 14px 0;
+  border-top: 1px solid var(--line);
+}
+
+.qrow:last-child {
+  border-bottom: 1px solid var(--line);
+}
+
+.qhead {
+  flex: 1 1 18rem;
+  min-width: 0;
+}
+
+.qhead label {
+  display: block;
+  color: var(--text);
+  font-size: 1.02rem;
+  font-weight: 600;
+}
+
+/* 이 돈이 어떤 혜택을 부르는지. 답을 적을 근거라 라벨 바로 밑에 둔다. */
+.qwhy {
+  margin: 3px 0 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+
+/* 건당 최소금액·승인시간처럼 답하기 전에 알아야 할 것. */
+.qnote {
+  display: block;
+  margin: 3px 0 0;
+  color: var(--seal);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.qrow input {
+  flex: 0 0 11rem;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 30rem) {
+  .qrow input {
+    flex: 1 1 100%;
+    text-align: left;
+  }
+}
+
+/* ───────────────────────────────────────────────────────────────────────────
+ * 4단계 — 구성 비교
+ * ─────────────────────────────────────────────────────────────────────────── */
+.best th,
+.best td {
+  background: var(--accent-soft);
+}
+
+.best th {
+  font-weight: 700;
 }

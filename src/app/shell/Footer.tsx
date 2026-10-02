@@ -1,12 +1,17 @@
 import { version } from '../../../package.json';
 
+interface Props {
+  /** 저장한 처방 입력을 지운다. */
+  onReset: () => void;
+}
+
 /**
  * 푸터.
  *
  * 상용 도구로 쓰려면 "이 숫자를 어디까지 믿어도 되는가"가 화면에 적혀 있어야 한다.
  * 계산 방식, 지금 실린 규칙의 한계, 저장하는 것과 저장하지 않는 것을 여기서 밝힌다.
  */
-export function Footer() {
+export function Footer({ onReset }: Props) {
   return (
     <footer className="footer">
       <div className="wrap footer-inner">
@@ -17,8 +22,13 @@ export function Footer() {
         </p>
         <ul>
           <li>
-            할인은 결제 시간순으로 한도를 소진하는 방식(FIFO)으로 계산합니다. 실제 카드사가
-            승인 순서대로 한도를 쓰는 방식과 같습니다.
+            화면에 뜨는 금액은 모두 결제 시간순으로 한도를 소진하는 방식(FIFO)으로 계산합니다.
+            실제 카드사가 승인 순서대로 한도를 쓰는 방식과 같습니다. 배분은 제안일 뿐이고,
+            금액은 그 배분을 실제로 실행했을 때 받는 액수입니다.
+          </li>
+          <li>
+            매달 같은 방식으로 쓴다고 보고 계산합니다. 지출이 들쭉날쭉한 달에는 전월실적이
+            모자라 구간이 깨질 수 있습니다. 구간 문턱에 딱 맞추지 말고 여유를 두세요.
           </li>
           <li>
             카드 규칙은 카드사의 <strong>혜택 안내 페이지</strong>를 읽어 옮긴 것이고,
@@ -26,8 +36,11 @@ export function Footer() {
             중요한 판단이라면 약관을 함께 확인하세요.
           </li>
           <li>
-            명세서와 계산 결과를 서버로 보내지 않습니다. 이 브라우저에 남는 것은 직접 정한 업종
-            규칙과 마지막으로 고른 카드뿐이고, 거래 내역은 탭을 닫으면 사라집니다.
+            아무것도 서버로 보내지 않습니다. 이 브라우저에 남는 것은 고른 카드와 적어 주신 월
+            예산·항목별 지출 상한뿐입니다.{' '}
+            <button type="button" className="link" onClick={onReset}>
+              저장한 값 지우기
+            </button>
           </li>
         </ul>
         <p className="meta">

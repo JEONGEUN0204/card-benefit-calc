@@ -348,35 +348,8 @@ a {
 }
 
 /* ── 3개월 원장 ────────────────────────────────────────────────────── */
-.ledger {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 0.9rem;
-}
 
 /* 달마다 한 장씩, 상자 없이 굵은 괘선 아래 선다. 달의 상태는 칩이 말한다. */
-.month {
-  display: flex;
-  flex-direction: column;
-  gap: 0.7rem;
-  padding-top: 0.9rem;
-  border-top: 2px solid var(--text);
-}
-
-.month-head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.4rem 0.55rem;
-}
-
-.month-name {
-  font-weight: 700;
-  letter-spacing: -0.02em;
-}
 
 .chip {
   font-size: 0.72rem;
@@ -446,10 +419,6 @@ a {
   font-variant-numeric: tabular-nums;
 }
 
-.strong {
-  font-weight: 700;
-}
-
 .mark {
   color: var(--mark);
 }
@@ -458,89 +427,9 @@ a {
   color: var(--seal);
 }
 
-.dim {
-  color: var(--muted);
-}
-
-.carry {
-  margin-top: auto;
-  font-size: 0.8rem;
-  color: var(--muted);
-  border-top: 1px dashed var(--line);
-  padding-top: 0.6rem;
-}
-
-.carry-warn {
-  color: var(--seal);
-}
-
 /* ── 필요 결제액 분해 ──────────────────────────────────────────────── */
-.split {
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.7rem;
-}
-
-.split-head {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 0.5rem 1rem;
-  font-weight: 650;
-}
-
-.split-head b {
-  font-size: clamp(1.3rem, 3vw, 1.9rem);
-  letter-spacing: -0.03em;
-}
-
-.split-bar {
-  display: flex;
-  border: 1px solid var(--line-strong);
-  border-radius: var(--r-md);
-  overflow: hidden;
-}
 
 /* 300,000 : 71,000 — 폭이 곧 비율이다. */
-.split-kept {
-  flex: 300 0 0;
-  background: var(--accent-soft);
-  border-right: 1px solid var(--accent-line);
-  color: var(--accent);
-}
-
-.split-out {
-  flex: 71 0 0;
-  background: var(--seal-soft);
-  color: var(--seal);
-}
-
-.split-kept,
-.split-out {
-  padding: 0.7rem 0.85rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.1rem;
-}
-
-.split-bar i {
-  font-style: normal;
-  font-size: 0.74rem;
-  letter-spacing: 0.02em;
-}
-
-.split-bar b {
-  font-size: 0.95rem;
-  font-variant-numeric: tabular-nums;
-}
-
-.split-note {
-  font-size: 0.85rem;
-  color: var(--muted);
-  max-width: 62ch;
-}
 
 /* ── 세 가지 답 ────────────────────────────────────────────────────── */
 .answers {
@@ -602,21 +491,6 @@ a {
   left: 0;
   color: var(--mark);
   font-weight: 700;
-}
-
-.reasons {
-  display: flex;
-  flex-direction: column;
-  gap: 0.7rem;
-  background: var(--surface-2);
-  border: 1px solid var(--line);
-  border-radius: var(--r-md);
-  padding: 1.1rem;
-}
-
-.reasons p {
-  font-size: 0.88rem;
-  color: var(--text-2);
 }
 
 .tags {
@@ -774,9 +648,7 @@ a {
     grid-template-columns: 1fr;
   }
 
-  .carry {
-    margin-top: 0;
-  }
+  
 
   .example {
     margin-top: 0;
@@ -785,23 +657,11 @@ a {
 
 @media (max-width: 640px) {
   /* 비율 막대가 글자보다 좁아지는 폭에서는 두 줄로 쌓는다. */
-  .split-bar {
-    flex-direction: column;
-  }
+  
 
-  .split-kept,
-  .split-out {
-    flex: none;
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: baseline;
-    gap: 0.8rem;
-  }
+  
 
-  .split-kept {
-    border-right: none;
-    border-bottom: 1px solid var(--accent-line);
-  }
+  
 
   .status > div {
     grid-template-columns: 1fr;
