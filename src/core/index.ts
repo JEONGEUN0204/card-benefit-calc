@@ -14,6 +14,7 @@ export type {
   DiscountReason,
   DiscountSpec,
   ExclusionMode,
+  HourRange,
   MatchRule,
   MonthResult,
   PaymentType,
@@ -27,6 +28,7 @@ export type {
   TierMaxDiscount,
   Transaction,
   TxResult,
+  Weekday,
   Won,
 } from './types.js';
 
@@ -36,7 +38,7 @@ export type { ChoiceSelection } from './choice.js';
 export { parseCardRule } from './parseCardRule.js';
 export type { CardRuleIssue, ParseCardRuleResult } from './parseCardRule.js';
 export { matchBenefits, matchesBenefit } from './match.js';
-export { benefitCapFor, groupCapFor, selectTier, totalCapFor } from './tier.js';
+export { benefitCapFor, groupCapFor, rebateFor, selectTier, totalCapFor } from './tier.js';
 export { applyDiscounts } from './discount.js';
 export type { MonthDiscountResult, TxDiscount } from './discount.js';
 export { calcSpending, countedSpendingOf, isExcludedFromSpending } from './spending.js';
@@ -47,3 +49,13 @@ export { maxDiscountByTier } from './maxDiscount.js';
 export { requiredSpendFor } from './requiredSpend.js';
 export { patternFromTransactions } from './pattern.js';
 export type { RequiredSpendOptions } from './requiredSpend.js';
+export { SPREAD_DAYS, synthesizeMonth, synthesizeSlices } from './synthesize.js';
+export type { SpendSlice, Synthetic } from './synthesize.js';
+export { ALL_SCOPE, scopeGroups, scopeKeyOf } from './scope.js';
+export type { ScopeGroup, ScopeMember } from './scope.js';
+export { attainableByTier } from './attainable.js';
+export type { AttainableBenefit, AttainableLimit, SpendCeilings, TierAttainable } from './attainable.js';
+export { steadyStateFor } from './steady.js';
+export { peakingCurve } from './peaking.js';
+export type { PeakingPoint } from './peaking.js';
+export type { SteadyOptions, SteadyState, SteadyTierRow } from './steady.js';

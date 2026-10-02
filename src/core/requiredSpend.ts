@@ -1,21 +1,10 @@
 import { assertResolved } from './choice.js';
 import { applyDiscounts } from './discount.js';
 import { calcSpending } from './spending.js';
+import { synthesizeMonth } from './synthesize.js';
 import { rebateFor } from './tier.js';
-import type {
-  CardRule,
-  RequiredSpendResult,
-  SpendingPattern,
-  SpendingSample,
-  Tier,
-  Transaction,
-  Won,
-} from './types.js';
+import type { CardRule, RequiredSpendResult, SpendingPattern, Tier, Won } from './types.js';
 
-const DEFAULT_TICKET: Won = 20_000;
-/** 가상 거래를 흩뿌릴 날짜 수. 일 단위 횟수 제한이 현실적으로 걸리게 한다. */
-const SPREAD_DAYS = 28;
-const BASE_MONTH = '2026-01';
 const DEFAULT_MAX_SPEND: Won = 100_000_000;
 
 export interface RequiredSpendOptions {
@@ -30,95 +19,6 @@ export interface RequiredSpendOptions {
   maxSpend?: Won;
 }
 
-/** 비중을 합이 1이 되도록 정규화한다. 0 이하 비중은 버린다. */
-function normalizeWeights(weights: Record<string, number>): Array<[string, number]> {
-  const entries = Object.entries(weights).filter(([, w]) => w > 0);
-  const sum = entries.reduce((acc, [, w]) => acc + w, 0);
-  return sum <= 0 ? [] : entries.map(([category, w]) => [category, w / sum]);
-}
-
-interface Synthetic {
-  txs: Transaction[];
-  breakdown: Record<string, Won>;
-}
-
-/**
- * 총 결제액을 카테고리 비중과 건단가에 따라 가상 거래로 쪼갠다.
- *
- * 건단가가 필요한 이유는 건당 최소금액·건당 한도·횟수 제한이 전부 "건" 단위이기
- * 때문이다. 총액만으로는 이 조건들을 흉내 낼 수 없다.
- * 마지막 카테고리가 반올림 오차를 흡수해 합계가 정확히 총액과 맞는다.
- */
-function buildTransactions(total: Won, pattern: SpendingPattern): Synthetic {
-  const samples = (pattern.samples ?? []).filter((s) => s.amount > 0);
-  if (samples.length > 0) return repeatSamples(total, samples);
-
-  const parts = normalizeWeights(pattern.weights);
-  const breakdown: Record<string, Won> = {};
-  const txs: Transaction[] = [];
-  let assigned = 0;
-  let seq = 0;
-
-  parts.forEach(([category, weight], index) => {
-    // 할인액이 아니라 예산 배분이라 절사가 아닌 반올림을 쓴다. roundDiscount는 할인액 전용이다.
-    const isLast = index === parts.length - 1;
-    const categoryTotal = isLast ? total - assigned : Math.round(total * weight);
-    assigned += categoryTotal;
-    breakdown[category] = categoryTotal;
-    if (categoryTotal <= 0) return;
-
-    const ticket = pattern.ticketSize?.[category] ?? pattern.defaultTicket ?? DEFAULT_TICKET;
-    const count = Math.max(1, Math.ceil(categoryTotal / ticket));
-    let remaining = categoryTotal;
-
-    for (let i = 0; i < count; i += 1) {
-      const amount = i === count - 1 ? remaining : Math.min(ticket, remaining);
-      remaining -= amount;
-      const day = String((seq % SPREAD_DAYS) + 1).padStart(2, '0');
-      txs.push({
-        id: `${category}-${String(i).padStart(6, '0')}`,
-        date: `${BASE_MONTH}-${day}`,
-        amount,
-        merchant: category,
-        category,
-      });
-      seq += 1;
-    }
-  });
-
-  return { txs, breakdown };
-}
-
-/**
- * 실제 거래 표본을 순서대로 되풀이해 총액을 채운다. 마지막 건은 남은 금액으로 자른다.
- *
- * 금액을 비율로 늘리지 않고 건을 되풀이하는 이유는 건당 최소금액·건당 한도가 원래 건단가에
- * 걸려 있기 때문이다. 가맹점명·해외·결제유형도 표본 그대로 옮겨 혜택 매칭이 원본과 같다.
- */
-function repeatSamples(total: Won, samples: readonly SpendingSample[]): Synthetic {
-  const breakdown: Record<string, Won> = {};
-  const txs: Transaction[] = [];
-  let remaining = total;
-  let seq = 0;
-
-  while (remaining > 0) {
-    const sample = samples[seq % samples.length]!;
-    const amount = Math.min(sample.amount, remaining);
-    remaining -= amount;
-    breakdown[sample.category] = (breakdown[sample.category] ?? 0) + amount;
-    const day = String((seq % SPREAD_DAYS) + 1).padStart(2, '0');
-    txs.push({
-      ...sample,
-      id: `sample-${String(seq).padStart(6, '0')}`,
-      date: `${BASE_MONTH}-${day}`,
-      amount,
-    });
-    seq += 1;
-  }
-
-  return { txs, breakdown };
-}
-
 interface Evaluated {
   spending: Won;
   discount: Won;
@@ -131,7 +31,7 @@ function evaluate(
   pattern: SpendingPattern,
   total: Won,
 ): Evaluated {
-  const { txs, breakdown } = buildTransactions(total, pattern);
+  const { txs, breakdown } = synthesizeMonth(total, pattern);
   const discounts = applyDiscounts(rule, tier, txs);
   const spending = calcSpending(rule, txs, discounts);
   // 월정액은 결제액과 무관하게 구간이 정한다. 실적에 영향이 없어 탐색에는 끼지 않는다.
@@ -140,7 +40,7 @@ function evaluate(
 }
 
 /**
- * 목표 구간을 채우려면 실제로 얼마를 써야 하는지 역산한다 (기능 2).
+ * 목표 구간을 채우려면 실제로 얼마를 써야 하는지 역산한다.
  *
  * 단순히 "목표 실적만큼 쓰면 된다"가 답이 아니다. 할인받은 건이 실적에서 빠지고
  * 상품권·세금 같은 항목도 빠지므로, 실제 필요액은 목표보다 크다. 게다가 얼마나
