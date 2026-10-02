@@ -1,0 +1,99 @@
+{
+  "id": "21-pot-group-cap",
+  "description": "팟 카드의 통합(공동) 할인한도가 혜택별 한도보다 먼저 바닥나는 달과, 그 결과 다음 달 구간이 무너지는 달. 전월 400,000 → 40만원 구간, 공동 한도 20,000. a1 쿠팡 100,000×15%=15,000(online-mall 한도 15,000에 꼭 맞음). a2 마켓컬리는 online-mall 한도를 이미 다 써 benefitCapReached — 쇼핑몰은 simple-pay의 excludeMerchants에 있어 간편결제로 넘어오지 않는다(안내의 \"중복 적용 안 됨\"). a3 배달 50,000×10%=5,000으로 공동 잔여 5,000에 꼭 맞고, a4 편의점은 공동 한도가 0이라 groupCapReached. 합 20,000원이 공동 한도와 정확히 같아 표와 배정이 어긋나지 않는지도 함께 못 박는다. 전 혜택 excludeFromSpending이 none이라 결제액 280,000이 전액 실적이고, 400,000에 모자라 2월은 구간 0 — 모든 혜택이 tierLocked다.",
+  "card": "bnk-pot",
+  "initialPrevSpending": 400000,
+  "transactions": [
+    {
+      "id": "a1",
+      "date": "2026-01-05",
+      "amount": 100000,
+      "merchant": "쿠팡",
+      "category": "online"
+    },
+    {
+      "id": "a2",
+      "date": "2026-01-10",
+      "amount": 100000,
+      "merchant": "마켓컬리",
+      "category": "online"
+    },
+    {
+      "id": "a3",
+      "date": "2026-01-15",
+      "amount": 50000,
+      "merchant": "배달의민족",
+      "category": "delivery"
+    },
+    {
+      "id": "a4",
+      "date": "2026-01-20",
+      "amount": 30000,
+      "merchant": "GS25",
+      "category": "convenience"
+    },
+    {
+      "id": "b1",
+      "date": "2026-02-05",
+      "amount": 100000,
+      "merchant": "쿠팡",
+      "category": "online"
+    }
+  ],
+  "expect": {
+    "months": [
+      {
+        "month": "2026-01",
+        "tierMin": 400000,
+        "prevSpending": 400000,
+        "rebate": 0,
+        "totalDiscount": 20000,
+        "countedSpending": 280000,
+        "transactions": {
+          "a1": {
+            "discount": 15000,
+            "reason": "ok",
+            "cappedBy": null,
+            "appliedBenefitId": "online-mall",
+            "countedSpending": 100000
+          },
+          "a2": {
+            "discount": 0,
+            "reason": "benefitCapReached",
+            "appliedBenefitId": null,
+            "countedSpending": 100000
+          },
+          "a3": {
+            "discount": 5000,
+            "reason": "ok",
+            "cappedBy": null,
+            "appliedBenefitId": "delivery",
+            "countedSpending": 50000
+          },
+          "a4": {
+            "discount": 0,
+            "reason": "groupCapReached",
+            "appliedBenefitId": null,
+            "countedSpending": 30000
+          }
+        }
+      },
+      {
+        "month": "2026-02",
+        "tierMin": 0,
+        "prevSpending": 280000,
+        "rebate": 0,
+        "totalDiscount": 0,
+        "countedSpending": 100000,
+        "transactions": {
+          "b1": {
+            "discount": 0,
+            "reason": "tierLocked",
+            "appliedBenefitId": null,
+            "countedSpending": 100000
+          }
+        }
+      }
+    ]
+  }
+}

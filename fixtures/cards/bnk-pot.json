@@ -1,0 +1,336 @@
+{
+  "id": "bnk-pot",
+  "name": "팟 카드",
+  "issuer": "부산은행",
+  "annualFee": 10000,
+  "rounding": "floor10",
+  "sourceNote": "출처: 사용자가 공유한 상담 대화(bccard.com 혜택 안내를 읽은 내용). 상품설명서(약관) 원본은 보지 못했으므로 아래 값들은 가정이고, 확인되면 고쳐야 한다.\n(1) 할인받은 결제가 실적에서 빠지는지 — 안내의 실적 제외 목록에 \"할인받은 이용금액\"이 없어 전 혜택 'none'으로 뒀다. 대화의 산수도 이쪽을 뒷받침한다(\"80만원 구간에서 할인 대상 30만원을 쓰고 남은 50만원은 아무 데나 써서 실적만 채우면 된다\" — 할인받은 30만원이 실적에서 빠진다면 80만원 구간을 지키려면 110만원을 써야 한다). 'full'이면 답이 크게 달라지므로 fixtures/testcards/bnk-pot-full.json에 같은 카드를 'full'로 둬서 골든 케이스로 차이를 못 박았다. 이 값은 진동 여부까지 가른다 — 'full'이면 구간이 달마다 왕복할 수 있다.\n(2) 절사 방식은 안내에 없어 10원 미만 절사(floor10)로 뒀다.\n(3) 연회비는 \"국내전용 1만원, 해외겸용 1만5천원\" 중 국내전용을 썼다.\n(4) \"발급 첫 달과 다음 달은 실적이 없어도 한도 2만원\"은 구간이 금액 하한으로만 나뉘어 적을 자리가 없다. 0 구간은 혜택 없음으로 뒀다.\n담지 못한 것: 실적 제외 목록의 **해외결제**다. SpendingExclusion.kind가 category·merchant·paymentType뿐이라 해외 결제를 실적에서 뺄 자리가 없다. 해외 결제를 하면 엔진이 실적을 실제보다 많게 잡아 \"구간을 채우려면 얼마\"를 과소평가한다. 이 카드에는 해외 혜택이 없어 할인 쪽에는 영향이 없다.",
+  "tiers": [
+    {
+      "min": 0,
+      "label": "40만원 미만"
+    },
+    {
+      "min": 400000,
+      "label": "40만원 이상"
+    },
+    {
+      "min": 800000,
+      "label": "80만원 이상"
+    }
+  ],
+  "capGroups": [
+    {
+      "id": "total",
+      "label": "통합 할인한도",
+      "monthlyCapByTier": {
+        "0": 0,
+        "400000": 20000,
+        "800000": 40000
+      }
+    }
+  ],
+  "spendingExclusions": [
+    {
+      "kind": "category",
+      "values": [
+        "tax",
+        "utility",
+        "giftCard",
+        "transport"
+      ]
+    },
+    {
+      "kind": "merchant",
+      "values": [
+        "관리비",
+        "임대료",
+        "상품권",
+        "기프트카드",
+        "선불카드",
+        "연회비",
+        "티머니",
+        "후불교통"
+      ]
+    }
+  ],
+  "benefits": [
+    {
+      "id": "simple-pay",
+      "label": "간편결제 10% 할인",
+      "match": {
+        "merchants": [
+          "네이버페이",
+          "카카오페이",
+          "삼성페이"
+        ],
+        "excludeMerchants": [
+          "쿠팡",
+          "무신사",
+          "에이블리",
+          "지그재그",
+          "마켓컬리",
+          "컬리",
+          "SSG",
+          "G마켓",
+          "옥션",
+          "11번가",
+          "카카오페이지"
+        ]
+      },
+      "discount": {
+        "type": "rate",
+        "rate": 0.1
+      },
+      "minTransaction": 10000,
+      "countLimit": {
+        "period": "month",
+        "max": 2
+      },
+      "monthlyCapByTier": {
+        "0": 0,
+        "400000": 15000,
+        "800000": 15000
+      },
+      "capGroup": "total",
+      "excludeFromSpending": "none",
+      "sourceNote": "\"간편결제(네이버페이/카카오페이/삼성페이) 1만원 이상 결제 시 10% 할인, 월 2회, 월 한도 1.5만원\". 건당 할인 한도는 안내에 없어 적지 않았다 — 그래서 엔진은 15만원 한 건으로 1.5만원이 다 찬다고 계산한다. 실제로 건당 한도가 있으면 필요한 건수가 늘어나므로 상품설명서에서 가장 먼저 확인할 자리다. 할인 대상 가맹점 목록을 excludeMerchants로 빼 둔 것은 중복 적용이 안 된다는 안내 때문이다. \"카카오페이지\"도 함께 뺐다 — \"카카오페이\"가 그 이름의 부분문자열이라 가맹점명 부분일치 때문에 웹툰 결제가 간편결제 할인에 걸렸다."
+    },
+    {
+      "id": "online-mall",
+      "label": "온라인쇼핑 15% 할인",
+      "match": {
+        "merchants": [
+          "쿠팡",
+          "무신사",
+          "에이블리",
+          "지그재그",
+          "마켓컬리",
+          "컬리",
+          "SSG",
+          "G마켓",
+          "옥션",
+          "11번가"
+        ]
+      },
+      "discount": {
+        "type": "rate",
+        "rate": 0.15
+      },
+      "minTransaction": 10000,
+      "countLimit": {
+        "period": "month",
+        "max": 2
+      },
+      "monthlyCapByTier": {
+        "0": 0,
+        "400000": 15000,
+        "800000": 15000
+      },
+      "capGroup": "total",
+      "excludeFromSpending": "none",
+      "sourceNote": "\"온라인쇼핑(무신사/에이블리/지그재그/마켓컬리/SSG/쿠팡/G마켓/옥션/11번가) 1만원 이상 결제 시 15% 할인, 월 2회, 월 한도 1.5만원\". 건당 할인 한도는 안내에 없다. 가맹점명으로 맞춘 이유는 online 업종에는 목록에 없는 쇼핑몰도 들어가기 때문이다."
+    },
+    {
+      "id": "subscription",
+      "label": "구독 30% 할인",
+      "match": {
+        "merchants": [
+          "넷플릭스",
+          "NETFLIX",
+          "멜론",
+          "MELON",
+          "유튜브프리미엄",
+          "YOUTUBE PREMIUM",
+          "디즈니플러스",
+          "DISNEY"
+        ],
+        "excludeMerchants": [
+          "APP STORE",
+          "APPSTORE",
+          "GOOGLE PLAY",
+          "GOOGLEPLAY",
+          "앱스토어",
+          "구글플레이"
+        ]
+      },
+      "discount": {
+        "type": "rate",
+        "rate": 0.3
+      },
+      "minTransaction": 8000,
+      "countLimit": {
+        "period": "month",
+        "max": 2
+      },
+      "monthlyCapByTier": {
+        "0": 0,
+        "400000": 20000,
+        "800000": 40000
+      },
+      "capGroup": "total",
+      "excludeFromSpending": "none",
+      "sourceNote": "\"구독(넷플릭스/멜론/유튜브프리미엄/디즈니플러스) 8천원 이상 결제 시 30% 할인, 월 2회\". 개별 월 한도는 안내에 없어 통합 한도와 같은 값을 넣었다(그룹 소진이 먼저 걸린다). \"인앱결제는 제외, 공식 홈페이지나 앱에서 직접 결제\"라 앱마켓 가맹점을 excludeMerchants로 뺐다. 통신요금 합산 청구는 카드 명세서에 통신사 이름으로 찍혀 구분할 수 없다."
+    },
+    {
+      "id": "delivery",
+      "label": "배달앱 10% 할인",
+      "match": {
+        "categories": [
+          "delivery"
+        ]
+      },
+      "discount": {
+        "type": "rate",
+        "rate": 0.1
+      },
+      "countLimit": {
+        "period": "month",
+        "max": 2
+      },
+      "monthlyCapByTier": {
+        "0": 0,
+        "400000": 20000,
+        "800000": 40000
+      },
+      "capGroup": "total",
+      "excludeFromSpending": "none",
+      "sourceNote": "\"배달앱(요기요/배달의민족) 10% 할인, 월 2회\". 건당 최소금액과 개별 한도는 안내에 없다. 업종(delivery)으로 맞췄다 — 가맹점 매핑이 배민·요기요를 이 업종으로 넣는다."
+    },
+    {
+      "id": "convenience",
+      "label": "편의점 10% 할인",
+      "match": {
+        "categories": [
+          "convenience"
+        ]
+      },
+      "discount": {
+        "type": "rate",
+        "rate": 0.1
+      },
+      "countLimit": {
+        "period": "month",
+        "max": 3
+      },
+      "monthlyCapByTier": {
+        "0": 0,
+        "400000": 20000,
+        "800000": 40000
+      },
+      "capGroup": "total",
+      "excludeFromSpending": "none",
+      "sourceNote": "\"편의점(GS25/CU/세븐일레븐/이마트24) 10% 할인, 월 3회\". 가맹점명이 아니라 업종(convenience)으로 맞춘 이유는 \"CU\"가 라틴 두 글자라서다 — 가맹점명 비교가 부분일치여서 \"cu\"를 품은 엉뚱한 가맹점에 번진다. 업종 매핑이 네 브랜드를 모두 convenience로 넣으므로 대상이 같다."
+    },
+    {
+      "id": "starbucks",
+      "label": "스타벅스 10% 할인",
+      "match": {
+        "merchants": [
+          "스타벅스",
+          "STARBUCKS"
+        ]
+      },
+      "discount": {
+        "type": "rate",
+        "rate": 0.1
+      },
+      "countLimit": {
+        "period": "month",
+        "max": 2
+      },
+      "monthlyCapByTier": {
+        "0": 0,
+        "400000": 20000,
+        "800000": 40000
+      },
+      "capGroup": "total",
+      "excludeFromSpending": "none",
+      "sourceNote": "\"스타벅스 10% 할인(사이렌오더 포함), 월 2회\". \"카드 충전·선물하기·상품권·선불카드 충전은 제외\"인데 명세서에는 충전도 스타벅스로 찍혀 구분할 수 없다 — 충전을 섞어 쓰면 엔진이 실제보다 많게 잡는다."
+    },
+    {
+      "id": "webtoon",
+      "label": "웹툰 10% 할인",
+      "match": {
+        "merchants": [
+          "카카오웹툰",
+          "카카오페이지",
+          "네이버웹툰",
+          "네이버시리즈"
+        ]
+      },
+      "discount": {
+        "type": "rate",
+        "rate": 0.1
+      },
+      "countLimit": {
+        "period": "month",
+        "max": 2
+      },
+      "monthlyCapByTier": {
+        "0": 0,
+        "400000": 20000,
+        "800000": 40000
+      },
+      "capGroup": "total",
+      "excludeFromSpending": "none",
+      "sourceNote": "\"웹툰(카카오웹툰/카카오페이지/네이버웹툰) 10% 할인, 월 2회\". 개별 한도는 안내에 없다."
+    },
+    {
+      "id": "photo-booth",
+      "label": "인생네컷 10% 할인",
+      "match": {
+        "merchants": [
+          "인생네컷",
+          "포토이즘",
+          "하루필름",
+          "셀픽스"
+        ]
+      },
+      "discount": {
+        "type": "rate",
+        "rate": 0.1
+      },
+      "countLimit": {
+        "period": "month",
+        "max": 2
+      },
+      "monthlyCapByTier": {
+        "0": 0,
+        "400000": 20000,
+        "800000": 40000
+      },
+      "capGroup": "total",
+      "excludeFromSpending": "none",
+      "sourceNote": "\"인생네컷 10% 할인, 월 2회\". 안내에는 인생네컷만 적혀 있는데 포토이즘·하루필름·셀픽스를 함께 넣은 것은 추측이 아니라 같은 즉석사진 업종 브랜드를 넓게 잡은 것이다 — 상품설명서에 대상 브랜드가 적혀 있으면 그 목록으로 좁힐 것."
+    },
+    {
+      "id": "theme-park",
+      "label": "놀이공원 자유이용권 50% 할인",
+      "match": {
+        "merchants": [
+          "에버랜드",
+          "롯데월드",
+          "서울랜드",
+          "경주월드",
+          "이월드"
+        ]
+      },
+      "discount": {
+        "type": "rate",
+        "rate": 0.5
+      },
+      "countLimit": {
+        "period": "month",
+        "max": 1
+      },
+      "monthlyCapByTier": {
+        "0": 0,
+        "400000": null,
+        "800000": null
+      },
+      "excludeFromSpending": "none",
+      "sourceNote": "\"놀이공원 자유이용권 50% 할인, 월 1회, 본인만, 현장할인\"이고 \"2만원 한도와 별도\"라 통합 한도 그룹(capGroup)에 넣지 않았다. 월 할인 한도가 안내에 없어 null(한도 없음)로 뒀다 — 구간별 최대 할인표에 \"+ 한도 없음\"으로 뜬다. 자유이용권 한 장이 상한이라 실제로는 건당 금액이 한도 역할을 하지만, 그 금액을 지어내지 않는다. \"본인만\"과 \"현장할인\"은 명세서로 가를 수 없다. 대상 놀이공원 목록은 추측이다."
+    }
+  ]
+}

@@ -1,0 +1,110 @@
+{
+  "id": "23-pot-exclude-full",
+  "description": "할인받은 결제가 실적에서 전액 빠지는 가정(excludeFromSpending: full)의 두 달. 22번과 거래가 완전히 같고 카드만 bnk-pot-full이다. 1월 할인은 22번과 똑같이 21,000원이지만, 할인받은 c1(100,000)·c2(20,000)가 실적에서 빠져 실적이 300,000원이다. 그래서 2월은 400,000에 모자라 구간 0이 되고 모든 혜택이 tierLocked — 2월 할인이 0원이다. 22번은 같은 거래로 2월에 20,000원을 받는다. 두 달 합 21,000원 대 41,000원, 두 배 차이다. 이 한 필드를 모르면 \"구간을 채우려면 얼마를 써야 하나\"의 답이 이만큼 갈린다.",
+  "card": "bnk-pot-full",
+  "initialPrevSpending": 800000,
+  "transactions": [
+    {
+      "id": "c1",
+      "date": "2026-01-05",
+      "amount": 100000,
+      "merchant": "쿠팡",
+      "category": "online"
+    },
+    {
+      "id": "c2",
+      "date": "2026-01-10",
+      "amount": 20000,
+      "merchant": "넷플릭스",
+      "category": "culture"
+    },
+    {
+      "id": "c3",
+      "date": "2026-01-15",
+      "amount": 300000,
+      "merchant": "일반가맹점",
+      "category": "etc"
+    },
+    {
+      "id": "d1",
+      "date": "2026-02-05",
+      "amount": 100000,
+      "merchant": "쿠팡",
+      "category": "online"
+    },
+    {
+      "id": "d2",
+      "date": "2026-02-10",
+      "amount": 20000,
+      "merchant": "넷플릭스",
+      "category": "culture"
+    },
+    {
+      "id": "d3",
+      "date": "2026-02-15",
+      "amount": 300000,
+      "merchant": "일반가맹점",
+      "category": "etc"
+    }
+  ],
+  "expect": {
+    "months": [
+      {
+        "month": "2026-01",
+        "tierMin": 800000,
+        "prevSpending": 800000,
+        "totalDiscount": 21000,
+        "countedSpending": 300000,
+        "transactions": {
+          "c1": {
+            "discount": 15000,
+            "reason": "ok",
+            "cappedBy": null,
+            "appliedBenefitId": "online-mall",
+            "countedSpending": 0
+          },
+          "c2": {
+            "discount": 6000,
+            "reason": "ok",
+            "cappedBy": null,
+            "appliedBenefitId": "subscription",
+            "countedSpending": 0
+          },
+          "c3": {
+            "discount": 0,
+            "reason": "noMatch",
+            "appliedBenefitId": null,
+            "countedSpending": 300000
+          }
+        }
+      },
+      {
+        "month": "2026-02",
+        "tierMin": 0,
+        "prevSpending": 300000,
+        "totalDiscount": 0,
+        "countedSpending": 420000,
+        "transactions": {
+          "d1": {
+            "discount": 0,
+            "reason": "tierLocked",
+            "appliedBenefitId": null,
+            "countedSpending": 100000
+          },
+          "d2": {
+            "discount": 0,
+            "reason": "tierLocked",
+            "appliedBenefitId": null,
+            "countedSpending": 20000
+          },
+          "d3": {
+            "discount": 0,
+            "reason": "noMatch",
+            "appliedBenefitId": null,
+            "countedSpending": 300000
+          }
+        }
+      }
+    ]
+  }
+}

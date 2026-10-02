@@ -1,0 +1,336 @@
+{
+  "id": "bnk-pot-full",
+  "name": "팟 카드 (실적 전액 제외 가정)",
+  "issuer": "부산은행",
+  "annualFee": 10000,
+  "rounding": "floor10",
+  "sourceNote": "fixtures/cards/bnk-pot.json과 같은 카드인데 excludeFromSpending만 전 혜택 'full'로 바꾼 것이다. 안내 페이지에 \"할인받은 이용금액 제외\" 문구가 없어 본 규칙은 'none'으로 뒀지만, 한국 카드에는 이 조건이 흔하고 값이 바뀌면 \"구간을 채우려면 얼마를 써야 하나\"의 답이 크게 달라진다. 두 골든 케이스가 같은 거래로 두 규칙을 돌려 차이를 숫자로 남긴다. 상품설명서를 확인해 한쪽이 확정되면 다른 쪽과 이 파일을 함께 지운다. 목록에 뜨지 않도록 fixtures/testcards/에 둔다.",
+  "tiers": [
+    {
+      "min": 0,
+      "label": "40만원 미만"
+    },
+    {
+      "min": 400000,
+      "label": "40만원 이상"
+    },
+    {
+      "min": 800000,
+      "label": "80만원 이상"
+    }
+  ],
+  "capGroups": [
+    {
+      "id": "total",
+      "label": "통합 할인한도",
+      "monthlyCapByTier": {
+        "0": 0,
+        "400000": 20000,
+        "800000": 40000
+      }
+    }
+  ],
+  "spendingExclusions": [
+    {
+      "kind": "category",
+      "values": [
+        "tax",
+        "utility",
+        "giftCard",
+        "transport"
+      ]
+    },
+    {
+      "kind": "merchant",
+      "values": [
+        "관리비",
+        "임대료",
+        "상품권",
+        "기프트카드",
+        "선불카드",
+        "연회비",
+        "티머니",
+        "후불교통"
+      ]
+    }
+  ],
+  "benefits": [
+    {
+      "id": "simple-pay",
+      "label": "간편결제 10% 할인",
+      "match": {
+        "merchants": [
+          "네이버페이",
+          "카카오페이",
+          "삼성페이"
+        ],
+        "excludeMerchants": [
+          "쿠팡",
+          "무신사",
+          "에이블리",
+          "지그재그",
+          "마켓컬리",
+          "컬리",
+          "SSG",
+          "G마켓",
+          "옥션",
+          "11번가",
+          "카카오페이지"
+        ]
+      },
+      "discount": {
+        "type": "rate",
+        "rate": 0.1
+      },
+      "minTransaction": 10000,
+      "countLimit": {
+        "period": "month",
+        "max": 2
+      },
+      "monthlyCapByTier": {
+        "0": 0,
+        "400000": 15000,
+        "800000": 15000
+      },
+      "capGroup": "total",
+      "excludeFromSpending": "full",
+      "sourceNote": "bnk-pot.json과 같다. excludeFromSpending만 'full'이다."
+    },
+    {
+      "id": "online-mall",
+      "label": "온라인쇼핑 15% 할인",
+      "match": {
+        "merchants": [
+          "쿠팡",
+          "무신사",
+          "에이블리",
+          "지그재그",
+          "마켓컬리",
+          "컬리",
+          "SSG",
+          "G마켓",
+          "옥션",
+          "11번가"
+        ]
+      },
+      "discount": {
+        "type": "rate",
+        "rate": 0.15
+      },
+      "minTransaction": 10000,
+      "countLimit": {
+        "period": "month",
+        "max": 2
+      },
+      "monthlyCapByTier": {
+        "0": 0,
+        "400000": 15000,
+        "800000": 15000
+      },
+      "capGroup": "total",
+      "excludeFromSpending": "full",
+      "sourceNote": "bnk-pot.json과 같다. excludeFromSpending만 'full'이다."
+    },
+    {
+      "id": "subscription",
+      "label": "구독 30% 할인",
+      "match": {
+        "merchants": [
+          "넷플릭스",
+          "NETFLIX",
+          "멜론",
+          "MELON",
+          "유튜브프리미엄",
+          "YOUTUBE PREMIUM",
+          "디즈니플러스",
+          "DISNEY"
+        ],
+        "excludeMerchants": [
+          "APP STORE",
+          "APPSTORE",
+          "GOOGLE PLAY",
+          "GOOGLEPLAY",
+          "앱스토어",
+          "구글플레이"
+        ]
+      },
+      "discount": {
+        "type": "rate",
+        "rate": 0.3
+      },
+      "minTransaction": 8000,
+      "countLimit": {
+        "period": "month",
+        "max": 2
+      },
+      "monthlyCapByTier": {
+        "0": 0,
+        "400000": 20000,
+        "800000": 40000
+      },
+      "capGroup": "total",
+      "excludeFromSpending": "full",
+      "sourceNote": "bnk-pot.json과 같다. excludeFromSpending만 'full'이다."
+    },
+    {
+      "id": "delivery",
+      "label": "배달앱 10% 할인",
+      "match": {
+        "categories": [
+          "delivery"
+        ]
+      },
+      "discount": {
+        "type": "rate",
+        "rate": 0.1
+      },
+      "countLimit": {
+        "period": "month",
+        "max": 2
+      },
+      "monthlyCapByTier": {
+        "0": 0,
+        "400000": 20000,
+        "800000": 40000
+      },
+      "capGroup": "total",
+      "excludeFromSpending": "full",
+      "sourceNote": "bnk-pot.json과 같다. excludeFromSpending만 'full'이다."
+    },
+    {
+      "id": "convenience",
+      "label": "편의점 10% 할인",
+      "match": {
+        "categories": [
+          "convenience"
+        ]
+      },
+      "discount": {
+        "type": "rate",
+        "rate": 0.1
+      },
+      "countLimit": {
+        "period": "month",
+        "max": 3
+      },
+      "monthlyCapByTier": {
+        "0": 0,
+        "400000": 20000,
+        "800000": 40000
+      },
+      "capGroup": "total",
+      "excludeFromSpending": "full",
+      "sourceNote": "bnk-pot.json과 같다. excludeFromSpending만 'full'이다."
+    },
+    {
+      "id": "starbucks",
+      "label": "스타벅스 10% 할인",
+      "match": {
+        "merchants": [
+          "스타벅스",
+          "STARBUCKS"
+        ]
+      },
+      "discount": {
+        "type": "rate",
+        "rate": 0.1
+      },
+      "countLimit": {
+        "period": "month",
+        "max": 2
+      },
+      "monthlyCapByTier": {
+        "0": 0,
+        "400000": 20000,
+        "800000": 40000
+      },
+      "capGroup": "total",
+      "excludeFromSpending": "full",
+      "sourceNote": "bnk-pot.json과 같다. excludeFromSpending만 'full'이다."
+    },
+    {
+      "id": "webtoon",
+      "label": "웹툰 10% 할인",
+      "match": {
+        "merchants": [
+          "카카오웹툰",
+          "카카오페이지",
+          "네이버웹툰",
+          "네이버시리즈"
+        ]
+      },
+      "discount": {
+        "type": "rate",
+        "rate": 0.1
+      },
+      "countLimit": {
+        "period": "month",
+        "max": 2
+      },
+      "monthlyCapByTier": {
+        "0": 0,
+        "400000": 20000,
+        "800000": 40000
+      },
+      "capGroup": "total",
+      "excludeFromSpending": "full",
+      "sourceNote": "bnk-pot.json과 같다. excludeFromSpending만 'full'이다."
+    },
+    {
+      "id": "photo-booth",
+      "label": "인생네컷 10% 할인",
+      "match": {
+        "merchants": [
+          "인생네컷",
+          "포토이즘",
+          "하루필름",
+          "셀픽스"
+        ]
+      },
+      "discount": {
+        "type": "rate",
+        "rate": 0.1
+      },
+      "countLimit": {
+        "period": "month",
+        "max": 2
+      },
+      "monthlyCapByTier": {
+        "0": 0,
+        "400000": 20000,
+        "800000": 40000
+      },
+      "capGroup": "total",
+      "excludeFromSpending": "full",
+      "sourceNote": "bnk-pot.json과 같다. excludeFromSpending만 'full'이다."
+    },
+    {
+      "id": "theme-park",
+      "label": "놀이공원 자유이용권 50% 할인",
+      "match": {
+        "merchants": [
+          "에버랜드",
+          "롯데월드",
+          "서울랜드",
+          "경주월드",
+          "이월드"
+        ]
+      },
+      "discount": {
+        "type": "rate",
+        "rate": 0.5
+      },
+      "countLimit": {
+        "period": "month",
+        "max": 1
+      },
+      "monthlyCapByTier": {
+        "0": 0,
+        "400000": null,
+        "800000": null
+      },
+      "excludeFromSpending": "full",
+      "sourceNote": "bnk-pot.json과 같다. excludeFromSpending만 'full'이다."
+    }
+  ]
+}

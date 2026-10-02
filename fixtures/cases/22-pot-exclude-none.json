@@ -1,0 +1,112 @@
+{
+  "id": "22-pot-exclude-none",
+  "description": "할인받은 결제가 실적에 남는 가정(excludeFromSpending: none)의 두 달. 23번과 거래가 똑같고 카드만 다르다 — 상품설명서를 보지 못해 이 값을 모르므로, 그 모름이 얼마짜리인지 두 케이스로 못 박는다. 1월: 전월 800,000 → 80만원 구간(공동 한도 40,000). c1 쿠팡 100,000×15%=15,000, c2 넷플릭스 20,000×30%=6,000, c3는 팟 카드에 전 가맹점 혜택이 없어 noMatch. 합 21,000. 할인받은 건이 실적에 남으므로 결제액 420,000이 전액 실적이다. 2월: 전월 420,000 → 40만원 구간(공동 한도 20,000). d1이 online-mall 한도 15,000을 채우고 d2는 공동 잔여 5,000만 받는다 → 합 20,000. 두 달 합 41,000원.",
+  "card": "bnk-pot",
+  "initialPrevSpending": 800000,
+  "transactions": [
+    {
+      "id": "c1",
+      "date": "2026-01-05",
+      "amount": 100000,
+      "merchant": "쿠팡",
+      "category": "online"
+    },
+    {
+      "id": "c2",
+      "date": "2026-01-10",
+      "amount": 20000,
+      "merchant": "넷플릭스",
+      "category": "culture"
+    },
+    {
+      "id": "c3",
+      "date": "2026-01-15",
+      "amount": 300000,
+      "merchant": "일반가맹점",
+      "category": "etc"
+    },
+    {
+      "id": "d1",
+      "date": "2026-02-05",
+      "amount": 100000,
+      "merchant": "쿠팡",
+      "category": "online"
+    },
+    {
+      "id": "d2",
+      "date": "2026-02-10",
+      "amount": 20000,
+      "merchant": "넷플릭스",
+      "category": "culture"
+    },
+    {
+      "id": "d3",
+      "date": "2026-02-15",
+      "amount": 300000,
+      "merchant": "일반가맹점",
+      "category": "etc"
+    }
+  ],
+  "expect": {
+    "months": [
+      {
+        "month": "2026-01",
+        "tierMin": 800000,
+        "prevSpending": 800000,
+        "totalDiscount": 21000,
+        "countedSpending": 420000,
+        "transactions": {
+          "c1": {
+            "discount": 15000,
+            "reason": "ok",
+            "cappedBy": null,
+            "appliedBenefitId": "online-mall",
+            "countedSpending": 100000
+          },
+          "c2": {
+            "discount": 6000,
+            "reason": "ok",
+            "cappedBy": null,
+            "appliedBenefitId": "subscription",
+            "countedSpending": 20000
+          },
+          "c3": {
+            "discount": 0,
+            "reason": "noMatch",
+            "appliedBenefitId": null,
+            "countedSpending": 300000
+          }
+        }
+      },
+      {
+        "month": "2026-02",
+        "tierMin": 400000,
+        "prevSpending": 420000,
+        "totalDiscount": 20000,
+        "countedSpending": 420000,
+        "transactions": {
+          "d1": {
+            "discount": 15000,
+            "reason": "ok",
+            "cappedBy": null,
+            "appliedBenefitId": "online-mall",
+            "countedSpending": 100000
+          },
+          "d2": {
+            "discount": 5000,
+            "reason": "ok",
+            "cappedBy": "group",
+            "appliedBenefitId": "subscription",
+            "countedSpending": 20000
+          },
+          "d3": {
+            "discount": 0,
+            "reason": "noMatch",
+            "appliedBenefitId": null,
+            "countedSpending": 300000
+          }
+        }
+      }
+    ]
+  }
+}
