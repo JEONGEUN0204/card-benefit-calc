@@ -49,12 +49,42 @@ fixtures/cards/images/ 카드 이미지(선택). 규칙의 `art.image`가 파일
 fixtures/testcards/   골든 케이스 전용 가상 카드. 목록에 뜨지 않고 검사는 똑같이 받는다
 fixtures/cases/       손으로 계산한 기대값을 담은 골든 케이스
 fixtures/statements/  카드사별 샘플 명세서
+fixtures/keyword-roster.json  가맹점 키워드가 어떤 이름에 걸리는지 못 박은 명부
 scripts/sim.ts        결과를 눈으로 대조하는 CLI
 scripts/import.ts     명세서를 거래 목록으로 옮기는 CLI
+scripts/roster.ts     가맹점 키워드 명부를 다시 만드는 CLI
 ```
 
 계산 흐름: 전월실적 → `selectTier` → `applyDiscounts`(건별 할인 + 한도 차감) →
 `calcSpending`(실적 제외 반영) → 다음 달 구간. `simulate`가 이 고리를 월별로 돌린다.
+
+**처방 경로는 그 고리를 거꾸로 돈다.** "이렇게 쓰면 얼마를 받나"에 답하려면 쓸 금액에서
+시작해야 하는데, 받는 할인이 다음 달 구간을 바꾸므로 고리가 닫히는 자리를 먼저 찾아야 한다.
+`steadyStateFor`(`steady.ts`)가 그 자리를 찾는다 — 구간마다 한 번씩만 돌려 구간 자기사상을
+만들고 사이클을 찾는다. **고정점 반복으로 풀지 않는다.** 할인이 많은 구간일수록 실적이
+줄어들어(`excludeFromSpending: 'full'`) 자기사상이 비증가가 되고, 비증가 사상은 고정점이
+아예 없을 수 있다. 번들 카드로 배분 76개를 훑으면 9개가 진동한다(토스 삼성 300000↔600000,
+월평균 26,000원). 반복 횟수를 정하는 순간 20,000이든 32,000이든 그럴듯하게 틀린 숫자를
+찍게 된다. **실적 제외가 없는 카드는 진동할 수 없다** — 실적이 결제액과 같아 자기사상이
+상수함수이고, 상수함수는 반드시 고정점을 가진다(EVERY 1·Mr.Life가 그렇다).
+
+처방 경로의 나머지 부품은 이렇게 맞물린다. `scopeGroups`(`scope.ts`)가 고른 카드들의 혜택을
+**지출 풀**로 묶어 무엇을 물을지 정하고, `attainableByTier`(`attainable.ts`)가 그 상한
+아래에서 실제로 받을 수 있는 최대를 내고, `peakingCurve`(`peaking.ts`)가 평균·한계 피킹률을
+낸다. `synthesizeSlices`(`synthesize.ts`)가 처방을 거래로 되돌려 `applyDiscounts`로 재현할
+수 있게 한다.
+
+**지출 풀을 묶는 이유는 이중계상이다.** 묶지 않고 카드마다 "간편결제에 얼마 쓰나"를 따로
+물으면 같은 돈이 두 번 세어지고, 배분이 있지도 않은 예산을 나눠 쓴다. 묶음은 원소(카테고리·
+가맹점·해외)가 겹치는 혜택의 연결 요소이고, 가맹점 키워드는 **부분일치 관계까지** 묶는다 —
+엔진의 가맹점 비교가 부분일치라 "쿠팡와우" 결제가 "쿠팡" 키워드에도 걸리기 때문이다. 그룹끼리는
+원소를 공유하지 않으므로 가장 작은 원소가 그룹의 유일한 id가 된다.
+
+**`maxDiscountByTier`와 `attainableByTier`는 다른 값이고 둘 다 필요하다.** 앞은 카드사
+안내문이 말하는 **명목** 한도이고(한도만 본다), 뒤는 내 소비로 **달성 가능**한 최대다
+(`countLimit`·`minTransaction`·`perTransactionCap`까지 본다). 팟 카드는 안내문의 월 최대가
+4만원인데 평범한 소비로는 2만원 남짓에서 멈춘다. 화면은 둘을 나란히 세우고, `maxDiscountByTier`는
+고치지 않는다 — `summary.ts`의 순액 원장 항등식과 소개 페이지의 숫자가 거기 걸려 있다.
 
 **한도는 세 층으로 겹친다.** 혜택별 한도(`monthlyCapByTier`) → 혜택 여럿이 나눠 쓰는 공동
 한도(`capGroups` + `Benefit.capGroup`) → 카드 전체 통합 한도(`totalMonthlyCapByTier`).
@@ -115,6 +145,17 @@ TIME 할인은 내 명세서로 돌리면 한 건도 걸리지 않는다. 구간
 
 번들된 규칙에는 `parseCardRule`(`src/core/`) 검사를 골든 테스트로 건다 — 가장 잘 숨는 실수인
 `monthlyCapByTier`의 구간 키 누락은 엔진이 0으로 읽어 오류 없이 할인액만 줄이기 때문이다.
+
+**두 번째로 잘 숨는 실수는 가맹점 키워드가 번지는 것이다.** 가맹점명 비교는 부분일치여서
+(`match.ts`의 `includesAny`) 명세서에 붙는 지점명을 넘길 수 있지만, 짧거나 흔한 키워드를
+적으면 엉뚱한 가맹점까지 잡는다. 지금까지 네 번 걸렸다 — `UT`(택시)가 YOUTUBE·OUTBACK·
+OUTLET에, `우버`가 우버이츠(배달)에, `카카오페이`가 카카오페이지(웹툰)에, `KT`(통신)가
+KTM모바일(알뜰폰)·KT스카이라이프(위성방송)에. 전부 할인액만 늘어나고 오류는 나지 않는다.
+그래서 **라틴 두세 글자 키워드는 쓰지 않고**(`CU`는 업종 `convenience`로, `UT`는 `우티`로),
+묶여 있는 혜택이면 공동 한도까지 함께 잠식하니 더 조심한다. 막는 장치는
+`fixtures/keyword-roster.json`이다 — 전 카드의 키워드를 명부로 모아 혜택마다 어떤 이름에
+걸리는지 못 박는다. **한 카드 안에서만 비교하면 안 된다**: Mr.Life 규칙 안에는 YOUTUBE가
+없고 그 이름은 다른 세 카드의 키워드였으므로, 명부를 전 카드에서 모아야 `UT`가 걸린다.
 카드 이미지는 번들된 파일만 쓴다. CSP가
 `img-src 'self' data:`라 카드사 서버의 URL은 어차피 뜨지 않는다. 파일이 없으면 카드 그림을
 아예 그리지 않는다 — 색으로 지은 카드 모양은 실제 카드와 닮지 않아 알아보는 데 돕지 못하고,
@@ -181,21 +222,35 @@ npm run sim -- fixtures/cases/19-mrlife-weekend-weekday.json # 주말에만 붙�
 npm run sim -- --max fixtures/cards/shinhan-toss-mrlife.json # TIME 공동 한도에 잘리는 구간표
 npm run sim -- --max fixtures/cards/samsung-id-select-all.json --choice select1=domestic --choice select2=daily
 npm run sim -- --max fixtures/cards/toss-samsung.json       # 구간별 최대 할인 (공동 한도 포함)
+npm run sim -- --max fixtures/cards/bnk-pot.json             # 통합 한도와 별도인 혜택(놀이공원)
+npm run sim -- fixtures/cases/22-pot-exclude-none.json      # 할인받은 결제가 실적에 남을 때
+npm run sim -- fixtures/cases/23-pot-exclude-full.json      # 같은 거래, 실적에서 빠질 때 (두 배 차이)
 npm run sim -- --required fixtures/testcards/simple-cafe.json --tier 300000
 npm run import -- fixtures/statements/shinhan-3months.csv    # 명세서 파싱 결과
+npm run roster                                              # 가맹점 키워드 명부 재생성 (+/- 로 보여준다)
 ```
+
+**가맹점 키워드를 고치거나 카드를 넣으면 명부 테스트가 깨진다.** `npm run roster`로 무엇이
+달라졌는지 보고, 늘어난 이름(+)이 그 혜택의 대상인지 하나씩 따진 뒤 픽스처를 다시 쓴다.
+대상이 아니면 규칙의 `excludeMerchants`로 끊고 왜 그랬는지 `sourceNote`에 적는다.
+vitest 자동 스냅샷(`-u`)은 쓰지 않는다 — 테스트가 결과에 맞춰 저절로 바뀌면 픽스처가 앵커
+역할을 잃는다(불변규칙 7).
 
 ## 하네스
 
 **트리거:** 계산 엔진이나 규칙 스키마를 고친 뒤에는 `verify-calc` 스킬을, 새 카드 약관을 규칙
 JSON으로 옮길 때는 `add-card-rule` 스킬을 쓴다.
 
-에이전트 팀은 아직 구성하지 않았다. 실제 카드는 이제 다섯 장(토스 삼성카드, 카드의정석 EVERY 1,
-KB국민 NEED Pay, 삼성 iD SELECT ALL, 토스 신한카드 Mr.Life)이고, 전부 혜택 안내 페이지만 읽어
-옮긴 것이다. `약관 → 규칙 JSON → 골든 케이스 → 검증` 절차가 다섯 바퀴 돌았고, **네 번째(삼성 iD
-SELECT ALL)에서 처음으로 스키마를 넓히지 않고 들어왔다** — 택1·한도 없음·해외가 이미 있어서다.
-다섯 번째는 다시 넓혔다(요일·시간대·횟수 두 겹). 파이프라인으로 묶는 일은 스키마 변경 없이
-들어오는 카드가 한 장 더 쌓인 뒤로 미룬다.
+에이전트 팀은 아직 구성하지 않았다. 실제 카드는 이제 여섯 장(토스 삼성카드, 카드의정석 EVERY 1,
+KB국민 NEED Pay, 삼성 iD SELECT ALL, 토스 신한카드 Mr.Life, 부산은행 팟 카드)이고, 전부 혜택
+안내 페이지만 읽어 옮긴 것이다. `약관 → 규칙 JSON → 골든 케이스 → 검증` 절차가 여섯 바퀴 돌았고,
+**네 번째(삼성 iD SELECT ALL)에서 처음으로 스키마를 넓히지 않고 들어왔다** — 택1·한도 없음·해외가
+이미 있어서다. 다섯 번째는 다시 넓혔다(요일·시간대·횟수 두 겹). 여섯 번째(팟 카드)도 엔진을
+건드리지 않았다. "통합 한도와 별도"인 혜택은 통합 대상을 `capGroups` 하나로 묶고
+`totalMonthlyCapByTier`를 쓰지 않는 방식으로 표현했고, 담지 못한 조건(해외 결제의 실적 제외)은
+끼워 맞추지 않고 5절에 적었다. 파이프라인으로 묶는 일은 **사람이 손으로 훑어야 하는 자리가 아직
+남아 있어** 미룬다 — 가맹점 키워드가 번지는지는 명부 테스트가 잡지만, 늘어난 이름이 그 혜택의
+대상인지 판단하는 일은 자동화되지 않는다.
 
 **규칙 JSON을 쓰다 스키마에 자리가 없으면 멈춘다.** 지금까지 막힌 자리는
 `.claude/skills/add-card-rule/SKILL.md` 5절에 모아 둔다. 거기 적힌 것을 엔진에 넣기로
@@ -236,3 +291,6 @@ SELECT ALL)에서 처음으로 스키마를 넓히지 않고 들어왔다** — 
 | 2026-10-01 | GitHub Pages 배포 | CLAUDE.md, .github/workflows/deploy.yml, vite.config.ts, index.html, src/app/shell/Footer.tsx | 무료로 공개하려고 GitHub Pages를 골랐다(저장소가 이미 공개라 추가 계정이 필요 없다). 사이트가 `/card-benefit-calc/` 아래에 서므로 `base`를 `BASE_PATH`로 받고, 페이지 사이 절대 링크(`/app/`, `/`)를 상대 경로로 바꿨다. 워크플로는 `npm test`·`typecheck`를 통과해야 배포한다 |
 | 2026-10-01 | 삼성 iD SELECT ALL 규칙 — 스키마를 넓히지 않고 들어온 첫 카드 | CLAUDE.md, fixtures/cards/samsung-id-select-all.json, fixtures/cases/16·17 | 택1 두 그룹(SELECT 1 셋·SELECT 2 둘)·한도 없음·해외 2%가 전부 이미 있는 자리에 맞아, 네 바퀴 만에 처음으로 엔진을 건드리지 않고 규칙만 썼다. 한 거래에 여러 혜택이 걸릴 때 약관이 말하는 "할인 혜택이 큰 금액만 적용"은 `rank`가 우선순위 동률에서 할인액이 큰 쪽을 먼저 보는 동작과 같은 결과라 priority를 적지 않았다. 0.7%(한도 없음)를 고르면 7% 한도가 소진된 뒤 그 아래를 받치는데, 골든 케이스 17이 그 넘어가는 자리를 못 박는다. 의료를 업종이 아니라 가맹점명(병원·의원·약국)으로 맞춘 이유는 온라인몰·배달앱과 한 혜택이라 카테고리를 함께 걸면 AND가 되어 아무것도 잡히지 않기 때문이다. 전월 이용금액 제외 목록에 0.7%·생활편의·디지털·해외가 없어 그 넷만 `none`이다 |
 | 2026-10-01 | 요일·시간대 조건과 횟수 제한 두 겹, 토스 신한카드 Mr.Life 규칙 | CLAUDE.md, .claude/skills/add-card-rule/SKILL.md, src/core/(types·match·discount·parseCardRule), src/core/__tests__/(schedule·countLimits).test.ts, fixtures/cards/shinhan-toss-mrlife.json, fixtures/cases/18·19 | 다섯 번째 카드가 세 곳에서 막혔다 — "주말(토/일)", "오후 9시~오전 9시", "주유 리터당 60원". 사용자가 앞의 둘을 엔진에서 풀기로 정했다. 요일은 거래 날짜에서 나오므로 정확히 계산되고(UTC 고정), 승인 시간은 명세서가 적어 줄 때만 `Transaction.time`에 붙어 없으면 매칭하지 않는다 — 해외 표기와 같은 원칙이다. 짐작으로 붙이면 밤에 쓰지 않은 결제가 할인으로 잡혀 조용히 부푼다. 옮기는 중에 "일 1회/월 5회"가 한 번 더 막았다: `countLimit` 하나로는 어느 쪽을 골라도 과대 계산이라 배열을 받게 넓혔고, 기존 표기는 그대로 둬서 카드 셋과 골든 케이스를 건드리지 않았다(규칙 7). 리터당 할인은 유가가 매달 바뀌어 넣지 못했고, 같은 한도를 나눠 쓰는 주말 할인이 그만큼 덜 찬다. 이 카드는 안내문에 "할인받은 이용금액 제외" 문구가 없어 전 혜택 `none`으로 뒀다 — 상품설명서로 가장 먼저 확인할 자리다 |
+| 2026-10-02 | 배분 최적화의 밑돌: 정상상태·지출 풀·달성 가능 한도·피킹률 | CLAUDE.md, src/core/(synthesize·scope·attainable·steady·peaking·index·requiredSpend) | 카드 한 장 시뮬레이터를 여러 장 배분 도구로 바꾸는 작업의 계산 밑돌. 기존 함수는 건드리지 않아 골든 케이스 19개가 그대로 증인이다. 처방 경로는 고리를 거꾸로 도므로 전월실적이 스스로를 재생산하는 자리를 먼저 찾아야 하는데, **고정점 반복으로 풀면 안 된다** — 할인이 많은 구간일수록 실적이 줄어 구간 자기사상이 비증가가 되고 고정점이 아예 없을 수 있다. 배분 76개를 훑어 9개가 진동하는 것을 확인했다(토스 삼성 300000↔600000, 월평균 26,000원). 반복 횟수를 정하는 순간 둘 중 아무 값이나 찍는다. 그래서 구간마다 한 번씩만 돌려 사이클을 찾는다. 실적 제외가 없는 카드는 자기사상이 상수함수라 진동할 수 없다는 것도 테스트로 박았다. 지출 풀을 묶는 이유는 이중계상이다 — 카드마다 "간편결제에 얼마"를 따로 물으면 같은 돈이 두 번 세어진다. 가맹점 키워드는 부분일치 관계까지 묶어야 한다("쿠팡와우"가 "쿠팡"에도 걸린다). `maxDiscountByTier`는 고치지 않고 `attainableByTier`를 따로 뒀다 — 명목과 달성 가능은 화면에 나란히 서야 하는 다른 값이고, 순액 원장 항등식과 소개 페이지 숫자가 앞의 것에 걸려 있다. 피킹률은 사용자가 상담 대화에서 받은 표를 소수점까지 재현한다 |
+| 2026-10-02 | 부산은행 팟 카드 규칙 — 모르는 값을 두 가지로 나눠 못 박기 | CLAUDE.md, fixtures/cards/bnk-pot.json, fixtures/testcards/bnk-pot-full.json, fixtures/cases/21·22·23 | 사용자의 실제 조합(팟 카드 + EVERY 1)을 계산할 수 있어야 배분 엔진을 본인 문제로 검증할 수 있다. 상품설명서를 보지 못해 할인받은 결제의 실적 제외 여부를 모르는데, 이 한 필드가 답을 두 배로 가른다. 그래서 `none`을 번들 규칙으로 두고(안내의 제외 목록에 문구가 없고 대화 자신의 산수도 이쪽이다) `full` 변종을 `testcards/`에 둬서 같은 거래로 두 규칙을 돌리는 골든 케이스를 나란히 만들었다 — 같은 결제 420,000원에 두 달 할인이 41,000원 대 21,000원이고, `full`이면 둘째 달에 구간이 무너져 0원이 된다. 모른다는 사실 자체를 숫자로 남기는 방식이다. "통합 한도와 별도"인 놀이공원은 통합 대상을 `capGroups` 하나로 묶고 `totalMonthlyCapByTier`를 안 써서 스키마 변경 없이 표현했다. 편의점은 가맹점명 대신 업종으로 맞췄다 — `CU`가 라틴 두 글자라 번진다. 담지 못한 것은 해외 결제의 실적 제외다(`SpendingExclusion.kind`에 자리가 없다) |
+| 2026-10-02 | 가맹점 키워드 오탐 4건 수정과 명부 가드 | CLAUDE.md, package.json, scripts/roster.ts, fixtures/keyword-roster.json, fixtures/cards/(shinhan-toss-mrlife·toss-samsung·kb-need-pay).json, fixtures/cases/20, src/core/__tests__/keywordRoster.test.ts | 가맹점명 비교가 부분일치라 짧은 키워드가 번진다. `UT`(택시)가 YOUTUBE·OUTBACK·OUTLET에, `우버`가 우버이츠(배달)에, `카카오페이`가 카카오페이지(웹툰)에, `KT`(통신)가 KTM모바일(알뜰폰)·KT스카이라이프(위성방송)에 걸리고 있었다. 넷 다 잠복 상태였다 — 명세서 파서가 `time`을 채우지 않고 `night-taxi`를 기대하는 골든 케이스가 없어 틀린 숫자가 난 적은 없지만, 승인시간이 있는 포맷이 들어오면 터진다. `night-taxi`는 `time` 공동 한도를 쓰므로 엉뚱한 결제가 다른 TIME 혜택의 한도까지 잠식한다. `bill`은 이미 `KTX`를 제외해 뒀으니 저자도 같은 위험을 알았는데 알뜰폰·위성방송을 놓쳤다. 전부 사람이 손으로 훑어 찾았으므로 명부로 못 박았다 — **전 카드의 키워드를 모아야** 한다(Mr.Life 안에는 YOUTUBE가 없고 그 이름은 다른 세 카드의 키워드였다). vitest 자동 스냅샷은 쓰지 않는다(불변규칙 7). 되살림 시험으로 가드가 실제로 막는지 확인했다 |
