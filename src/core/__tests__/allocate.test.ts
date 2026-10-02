@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { allocate } from '../allocate.js';
+import { allocate, comparePortfolios } from '../allocate.js';
 import { parseCardRule } from '../parseCardRule.js';
 import { REST_POOL } from '../scope.js';
 import type { SpendCeilings } from '../attainable.js';
@@ -373,5 +373,84 @@ describe('allocate — 금액의 출처는 FIFO 하나다', () => {
       ceilings: { byKey: { 'c:online': 500_000, [REST_POOL]: 0 }, monthlyBudget: 500_000 },
     });
     expect(result.monthlyDiscount).toBe(2_000);
+  });
+});
+
+describe('comparePortfolios — 구성 비교', () => {
+  const plain = (id: string, rate: number, cap: number, fee = 0): CardRule =>
+    card({
+      id,
+      annualFee: fee,
+      tiers: [{ min: 0 }],
+      benefits: [
+        benefit({
+          id: 'every',
+          match: {},
+          discount: { type: 'rate', rate },
+          monthlyCapByTier: { '0': cap },
+          excludeFromSpending: 'none',
+        }),
+      ],
+      rounding: 'floor1',
+    });
+
+  const input = {
+    cards: [plain('LOW', 0.01, 1_000_000), plain('HIGH', 0.02, 4_000)],
+    ceilings: { byKey: { [REST_POOL]: 500_000 }, monthlyBudget: 500_000 },
+  };
+
+  it('카드 조합마다 하나씩, 연 순이익 내림차순으로 돌려준다', () => {
+    const options = comparePortfolios(input);
+    expect(options.map((o) => o.cardIds)).toEqual([
+      ['LOW', 'HIGH'],
+      ['LOW'],
+      ['HIGH'],
+    ]);
+    const nets = options.map((o) => o.allocation.annualNet);
+    expect([...nets].sort((a, b) => b - a)).toEqual(nets);
+  });
+
+  it('가장 좋은 구성이 allocate의 답과 같다', () => {
+    const best = comparePortfolios(input)[0];
+    expect(best?.allocation.annualNet).toBe(allocate(input).annualNet);
+  });
+
+  it('한 장만 쓰는 구성도 계산한다', () => {
+    const options = comparePortfolios(input);
+    const onlyHigh = must(
+      options.find((o) => o.cardIds.join() === 'HIGH'),
+      'HIGH만',
+    );
+    // 2%에 한도 4,000원 → 200,000원까지만 쓸모가 있고 나머지는 남는다
+    expect(onlyHigh.allocation.monthlyDiscount).toBe(4_000);
+    expect(onlyHigh.allocation.leftover).toBe(300_000);
+  });
+
+  it('반드시 써야 하는 카드가 빠진 구성은 내놓지 않는다', () => {
+    const options = comparePortfolios({
+      ...input,
+      constraints: [{ cardId: 'LOW', minMonthlySpend: 100_000 }],
+    });
+    expect(options.every((o) => o.cardIds.includes('LOW'))).toBe(true);
+    expect(options.map((o) => o.cardIds)).toEqual([['LOW', 'HIGH'], ['LOW']]);
+  });
+
+  it('카드가 없으면 빈 목록이다', () => {
+    expect(
+      comparePortfolios({
+        cards: [],
+        ceilings: { byKey: {}, monthlyBudget: 500_000 },
+      }),
+    ).toEqual([]);
+  });
+
+  it('연회비가 비싼 카드는 구성 비교에서 뒤로 간다', () => {
+    const options = comparePortfolios({
+      cards: [plain('CHEAP', 0.01, 1_000_000, 0), plain('PRICEY', 0.02, 1_000, 120_000)],
+      ceilings: { byKey: { [REST_POOL]: 500_000 }, monthlyBudget: 500_000 },
+    });
+    // CHEAP 한 장이 가장 낫다 — PRICEY는 월 1,000원을 받으려고 월 10,000원을 낸다
+    expect(options[0]?.cardIds).toEqual(['CHEAP']);
+    expect(options.at(-1)?.cardIds).toEqual(['PRICEY']);
   });
 });

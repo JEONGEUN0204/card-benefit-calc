@@ -1,4 +1,4 @@
-import { attainableByTier, effectiveRateOf, benefitPlanFor } from './attainable.js';
+import { attainableAtTier, effectiveRateOf, benefitPlanFor } from './attainable.js';
 import { assertResolved } from './choice.js';
 import { REST_POOL, poolsForBenefit, scopeGroups, spendPools } from './scope.js';
 import { steadyStateFor } from './steady.js';
@@ -196,8 +196,7 @@ function analyticDiscount(
   if (tier === null || total <= 0) return 0;
   const byKey: Record<string, Won> = {};
   for (const [key, amount] of pools) if (amount > 0) byKey[key] = amount;
-  const rows = attainableByTier(card, groups, { byKey, monthlyBudget: total });
-  return rows.find((r) => r.tier.min === tier.min)?.attainable ?? 0;
+  return attainableAtTier(card, groups, tier, { byKey, monthlyBudget: total }).attainable;
 }
 
 function buildDraft(
@@ -571,4 +570,73 @@ export function allocate(input: AllocateInput): Allocation {
   }
 
   return { ...chosen, upperBound, gap, warnings };
+}
+
+/** 카드 조합 하나와 그 조합의 최적 배분. */
+export interface PortfolioOption {
+  /** 쓰는 카드. 입력 순서를 지킨다. */
+  cardIds: string[];
+  allocation: Allocation;
+}
+
+/** 부분집합을 다 훑기에 너무 많으면 멈추는 선. 카드 다섯 장이면 31개다. */
+const MAX_PORTFOLIOS = 31;
+
+/**
+ * 카드 조합마다 최적 배분을 구해 연 순이익 내림차순으로 돌려준다.
+ *
+ * `allocate`는 이미 "안 쓰는 카드"를 정의역에 두어 가장 좋은 조합을 찾는다. 이 함수는
+ * 그 결론만 보여 주는 대신 **대안을 나란히 세우는** 데 쓴다 — "둘 다 vs EVERY 1만 vs
+ * 팟만"을 견주어야 카드를 새로 발급할지 정할 수 있기 때문이다.
+ *
+ * 반드시 써야 하는 카드(최소 사용액 제약)가 빠진 조합은 내놓지 않는다. 적금 우대 조건은
+ * 카드 혜택과 무관한 이유로 그 카드를 쓰게 하므로, 그 카드를 뺀 구성은 선택지가 아니다.
+ */
+export function comparePortfolios(input: AllocateInput): PortfolioOption[] {
+  const n = input.cards.length;
+  if (n === 0) return [];
+  const total = 2 ** n - 1;
+  if (total > MAX_PORTFOLIOS) {
+    // 조합이 너무 많다. 전체와 한 장씩만 견준다.
+    const subsets = [input.cards.map((c) => c.id), ...input.cards.map((c) => [c.id])];
+    return rank(input, subsets);
+  }
+
+  const subsets: string[][] = [];
+  for (let mask = 1; mask <= total; mask += 1) {
+    const ids = input.cards.filter((_, i) => (mask & (1 << i)) !== 0).map((c) => c.id);
+    subsets.push(ids);
+  }
+  return rank(input, subsets);
+}
+
+function rank(input: AllocateInput, subsets: readonly string[][]): PortfolioOption[] {
+  const required = (input.constraints ?? [])
+    .filter((c) => (c.minMonthlySpend ?? 0) > 0)
+    .map((c) => c.cardId);
+
+  const out: PortfolioOption[] = [];
+  for (const cardIds of subsets) {
+    if (!required.every((id) => cardIds.includes(id))) continue;
+    const cards = input.cards.filter((c) => cardIds.includes(c.id));
+    const constraints = (input.constraints ?? []).filter((c) => cardIds.includes(c.cardId));
+    const pinned = (input.pinned ?? []).filter((p) => cardIds.includes(p.cardId));
+    out.push({
+      cardIds,
+      allocation: allocate({
+        cards,
+        ceilings: input.ceilings,
+        ...(constraints.length > 0 ? { constraints } : {}),
+        ...(pinned.length > 0 ? { pinned } : {}),
+      }),
+    });
+  }
+
+  // 연 순이익이 같으면 카드가 적은 쪽을 앞에 둔다 — 매달 실적을 맞추는 수고가 적다.
+  return out.sort(
+    (a, b) =>
+      b.allocation.annualNet - a.allocation.annualNet ||
+      a.cardIds.length - b.cardIds.length ||
+      (a.cardIds.join() < b.cardIds.join() ? -1 : 1),
+  );
 }

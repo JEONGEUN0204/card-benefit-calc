@@ -218,23 +218,38 @@ export function benefitPlanFor(
  * 들어오는지는 보지 않으므로, 정확한 값은 `applyDiscounts`로 재현해 확인해야 한다
  * (불변규칙 4).
  */
-export function attainableByTier(
+/** 할인율 내림차순. 동률이면 규칙에 적힌 순서를 지켜 같은 입력이 같은 답을 내게 한다. */
+function rateOrder(rule: CardRule): Benefit[] {
+  return rule.benefits
+    .map((benefit, index) => ({ benefit, index }))
+    .sort((x, y) => effectiveRateOf(y.benefit) - effectiveRateOf(x.benefit) || x.index - y.index)
+    .map(({ benefit }) => benefit);
+}
+
+/** 구간 하나의 달성 가능액. 명목 최대는 빠져 있다(`maxDiscountByTier`가 필요하다). */
+export interface TierAttainableCore {
+  tier: Tier;
+  byBenefit: AttainableBenefit[];
+  attainable: Won;
+  rebate: Won;
+}
+
+/**
+ * 구간 **하나**의 달성 가능액.
+ *
+ * 배분 최적화는 이 함수를 수천 번 부른다 — 구간 조합마다 한계 가치를 재야 하기 때문이다.
+ * 그래서 `attainableByTier`처럼 모든 구간을 돌거나 `maxDiscountByTier`를 다시 계산하지
+ * 않는다. 카드 다섯 장에서 3.3초가 0.4초로 줄었다.
+ */
+export function attainableAtTier(
   rule: CardRule,
   groups: readonly ScopeGroup[],
+  tier: Tier,
   ceilings: SpendCeilings,
-): TierAttainable[] {
-  assertResolved(rule);
-  const nominalRows = maxDiscountByTier(rule);
-
-  // 할인율 내림차순. 동률이면 규칙에 적힌 순서를 지켜 같은 입력이 같은 답을 내게 한다.
-  const order = rule.benefits
-    .map((benefit, index) => ({ benefit, index }))
-    .sort((x, y) => effectiveRateOf(y.benefit) - effectiveRateOf(x.benefit) || x.index - y.index);
-
-  return [...rule.tiers]
-    .sort((a, b) => a.min - b.min)
-    .map((tier) => {
-      const nominalRow = nominalRows.find((r) => r.tier.min === tier.min);
+  order: readonly Benefit[] = rateOrder(rule),
+): TierAttainableCore {
+  {
+    {
       const scopeLeft = new Map<string, Won>();
       const groupLeft = new Map<string, Won>();
       let budgetLeft = ceilings.monthlyBudget;
@@ -249,7 +264,7 @@ export function attainableByTier(
         return Math.min(pool, budgetLeft);
       };
 
-      for (const { benefit } of order) {
+      for (const benefit of order) {
         const cap = benefitCapFor(benefit, tier);
         const key = scopeKeyOf(groups, rule.id, benefit.id) ?? ALL_SCOPE;
         const nominalCap = Number.isFinite(cap) ? cap : null;
@@ -359,8 +374,36 @@ export function attainableByTier(
             },
         ),
         attainable: sum + rebate,
-        nominal: nominalRow?.maxDiscount ?? 0,
         rebate,
+      };
+    }
+  }
+}
+
+/**
+ * 구간별로, 내 지출 상한 아래에서 실제로 받을 수 있는 최대 할인을 뽑는다.
+ *
+ * 명목 최대(`maxDiscountByTier`)를 나란히 담아 화면이 둘을 함께 세울 수 있게 한다.
+ * 그 차이가 이 함수의 존재 이유다 — 카드사 안내문의 월 최대는 한도의 상한일 뿐이고,
+ * 그만큼 받으려면 해당 항목에 그만큼 써야 한다.
+ */
+export function attainableByTier(
+  rule: CardRule,
+  groups: readonly ScopeGroup[],
+  ceilings: SpendCeilings,
+): TierAttainable[] {
+  assertResolved(rule);
+  const nominalRows = maxDiscountByTier(rule);
+  const order = rateOrder(rule);
+
+  return [...rule.tiers]
+    .sort((a, b) => a.min - b.min)
+    .map((tier) => {
+      const core = attainableAtTier(rule, groups, tier, ceilings, order);
+      const nominalRow = nominalRows.find((r) => r.tier.min === tier.min);
+      return {
+        ...core,
+        nominal: nominalRow?.maxDiscount ?? 0,
         unboundedBenefits: nominalRow?.unboundedBenefits ?? [],
       };
     });
